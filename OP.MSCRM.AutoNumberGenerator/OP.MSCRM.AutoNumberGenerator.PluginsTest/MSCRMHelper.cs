@@ -76,6 +76,7 @@ namespace OP.MSCRM.AutoNumberGenerator.PluginsTest
             }
         }
 
+
         /// <summary>
         /// Retrieve all entity records
         /// </summary>

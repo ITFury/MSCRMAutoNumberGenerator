@@ -4,7 +4,7 @@ using Microsoft.Xrm.Sdk;
 using System.Threading;
 using System.Linq;
 using Microsoft.Xrm.Sdk.Query;
-
+using OP.MSCRM.AutoNumberGenerator.Plugins.Extensions;
 
 namespace OP.MSCRM.AutoNumberGenerator.PluginsTest
 {
@@ -12,9 +12,21 @@ namespace OP.MSCRM.AutoNumberGenerator.PluginsTest
     /// Auto Number generation manager test. Test MS CRM services.
     /// </summary>
     [TestClass]
-    public class GenerateAutoNumberManagerCRMServicesTest
+    public class GenerateAutoNumberManagerCRMServicesTest: GenerateAutoNumberManagerTest
     {
         #region MS CRM Auto Number generation test
+
+        /// <summary>
+        /// Entity name where display Auto Number
+        /// </summary>
+        private const string entityLogicalName = "op_auto_number_test";
+
+
+        /// <summary>
+        /// Entity field name where display Auto Number
+        /// </summary>
+        private const string entityAttributeName = "op_auto_number";
+
 
         private IOrganizationService ActualOrgService
         {
@@ -28,8 +40,8 @@ namespace OP.MSCRM.AutoNumberGenerator.PluginsTest
         public Entity CreateEntity()
         {
             Entity autoNumberDisplayEntity = new Entity();
-            autoNumberDisplayEntity.LogicalName = "op_auto_number_test";
-            autoNumberDisplayEntity["op_auto_number"] = "test";
+            autoNumberDisplayEntity.LogicalName = entityLogicalName;
+            autoNumberDisplayEntity[entityAttributeName] = "test";
 
             return autoNumberDisplayEntity;
         }
@@ -71,9 +83,9 @@ namespace OP.MSCRM.AutoNumberGenerator.PluginsTest
             }
 
             //Validate duplicate of Auto Number
-            List<Entity> entities = ActualOrgService.RetrieveAll<Entity>("op_auto_number_test", new ColumnSet("op_auto_number"));
+            List<Entity> entities = ActualOrgService.RetrieveAll<Entity>(entityLogicalName, new ColumnSet(entityAttributeName));
 
-            bool isDuplicate = entities.GroupBy(e => e.Attributes["op_auto_number"]).Any(a => a.Count() > 1);
+            bool isDuplicate = entities.GroupBy(e => e.Attributes[entityAttributeName]).Any(a => a.Count() > 1);
 
             //Assert
             Assert.IsFalse(isDuplicate);
@@ -84,9 +96,24 @@ namespace OP.MSCRM.AutoNumberGenerator.PluginsTest
         {
             Entity autoNumberDisplayEntity = new Entity();
             autoNumberDisplayEntity.Id = entity.Id;
-            autoNumberDisplayEntity.LogicalName = "op_auto_number_test";
-            autoNumberDisplayEntity["op_auto_number"] = "updated";
+            autoNumberDisplayEntity.LogicalName = entityLogicalName;
+            autoNumberDisplayEntity[entityAttributeName] = "updated";
             ActualOrgService.Update(autoNumberDisplayEntity);
+        }
+
+
+        private void DeletePreviousEntities()
+        {
+            //Retrieve entities
+            List<Entity> entitiesToClear = ActualOrgService.RetrieveAll<Entity>(entityLogicalName, new ColumnSet(entityAttributeName));
+            if (entitiesToClear != null && entitiesToClear.Count > 0)
+            {
+                foreach (var entityToClear in entitiesToClear)
+                {
+                    //Delete previous created records
+                    ActualOrgService.Delete(entityLogicalName, entityToClear.Id);
+                }
+            }
         }
 
 
@@ -94,9 +121,26 @@ namespace OP.MSCRM.AutoNumberGenerator.PluginsTest
         public void UpdateAutoNumberDisplayEntity_Valid()
         {
             //Arrange
-            var expectedAutoNumber = "10";
+            var autoNumberConfigs = ActualOrgService.RetrieveAutoNumberConfig(entityLogicalName);
+            string autoNumberFormat = string.Empty;
+            int? autoNumberFormatLength = null;
+            if (autoNumberConfigs != null)
+            {
+                foreach (var autoNumberConfig in autoNumberConfigs)
+                {
+                    //Get format
+                    autoNumberFormat = autoNumberConfig.op_format;
+                    autoNumberFormatLength = autoNumberConfig.op_format_number_length;
+                }
+            }
+
+            var formatWithLength = AutoNumberManager.GenerateAutoNumber(autoNumberFormat, autoNumberFormatLength.Value, 9);
+
+            var expectedAutoNumber = string.Format(formatWithLength, "10");
 
             //Act
+            DeletePreviousEntities();
+
             for (int i = 0; i < 10; i++)
             {
                 Entity entity = CreateEntity();
@@ -105,12 +149,12 @@ namespace OP.MSCRM.AutoNumberGenerator.PluginsTest
             }
 
             //Retrieve entities
-            List<Entity> createdEntities = ActualOrgService.RetrieveAll<Entity>("op_auto_number_test", new ColumnSet("op_auto_number"));
+            List<Entity> createdEntities = ActualOrgService.RetrieveAll<Entity>(entityLogicalName, new ColumnSet(entityAttributeName));
 
             var lastEntity = createdEntities.LastOrDefault();
             //Update entity
             UpdateEntity(lastEntity);
-            var actualAutoNumber = lastEntity.GetAttributeValue<string>("op_auto_number");
+            var actualAutoNumber = lastEntity.GetAttributeValue<string>(entityAttributeName);
 
             //Assert
             Assert.AreEqual(expectedAutoNumber, actualAutoNumber);
@@ -131,8 +175,7 @@ namespace OP.MSCRM.AutoNumberGenerator.PluginsTest
             }
 
             //Retrieve entities
-            List<Entity> createdEntities = ActualOrgService.RetrieveAll<Entity>("op_auto_number_test", new ColumnSet("op_auto_number"));
-
+            List<Entity> createdEntities = ActualOrgService.RetrieveAll<Entity>(entityLogicalName, new ColumnSet(entityAttributeName));
 
             Thread[] threads = new Thread[20];
             for (int i = 0; i < threads.Length; i++)
@@ -153,9 +196,9 @@ namespace OP.MSCRM.AutoNumberGenerator.PluginsTest
             }
 
             //Validate duplicate of Auto Number
-            var updatedEntities = ActualOrgService.RetrieveAll<Entity>("op_auto_number_test", new ColumnSet("op_auto_number"));
+            var updatedEntities = ActualOrgService.RetrieveAll<Entity>(entityLogicalName, new ColumnSet(entityAttributeName));
 
-            bool isDuplicate = updatedEntities.GroupBy(e => e.Attributes["op_auto_number"]).Any(a => a.Count() > 1);
+            bool isDuplicate = updatedEntities.GroupBy(e => e.Attributes[entityAttributeName]).Any(a => a.Count() > 1);
 
             //Assert
             Assert.IsFalse(isDuplicate);
@@ -169,6 +212,19 @@ namespace OP.MSCRM.AutoNumberGenerator.PluginsTest
             var expectedAutoNumberCount = 5;
 
             //Act
+            DeletePreviousEntities();
+
+            //Retrieve entities
+            List<Entity> entitiesToClear = ActualOrgService.RetrieveAll<Entity>(entityLogicalName, new ColumnSet(entityAttributeName));
+            if(entitiesToClear != null && entitiesToClear.Count > 0)
+            {
+                foreach (var entityToClear in entitiesToClear)
+                {
+                    //Delete previous created records
+                    ActualOrgService.Delete(entityLogicalName, entityToClear.Id);
+                }
+            }
+
             for (int i = 0; i < 10; i++)
             {
                 Entity entity = CreateEntity();
@@ -177,16 +233,16 @@ namespace OP.MSCRM.AutoNumberGenerator.PluginsTest
             }
 
             //Retrieve entities
-            List<Entity> createdEntities = ActualOrgService.RetrieveAll<Entity>("op_auto_number_test", new ColumnSet("op_auto_number"));
+            List<Entity> createdEntities = ActualOrgService.RetrieveAll<Entity>(entityLogicalName, new ColumnSet(entityAttributeName));
 
             for (int i = 0; i < createdEntities.Count; i = i+2)
             {
                 var entityId = createdEntities[i + 1].Id;
-                ActualOrgService.Delete("op_auto_number_test", entityId);
+                ActualOrgService.Delete(entityLogicalName, entityId);
             }
 
             //Retrieve entities
-            List<Entity> entities = ActualOrgService.RetrieveAll<Entity>("op_auto_number_test", new ColumnSet("op_auto_number"));
+            List<Entity> entities = ActualOrgService.RetrieveAll<Entity>(entityLogicalName, new ColumnSet(entityAttributeName));
             var actualAutoNumberCount = entities.Count();
 
             //Assert
@@ -199,7 +255,7 @@ namespace OP.MSCRM.AutoNumberGenerator.PluginsTest
         public void DeleteAutoNumberDisplayEntity_NoDuplicateAutoNumberValid()
         {
             //Act
-
+            DeletePreviousEntities();
             //Create entity
             for (int i = 0; i < 20; i++)
             {
@@ -208,7 +264,7 @@ namespace OP.MSCRM.AutoNumberGenerator.PluginsTest
             }
 
             //Retrieve entities
-            List<Entity> createdEntities = ActualOrgService.RetrieveAll<Entity>("op_auto_number_test", new ColumnSet("op_auto_number"));
+            List<Entity> createdEntities = ActualOrgService.RetrieveAll<Entity>(entityLogicalName, new ColumnSet(entityAttributeName));
 
 
             Thread[] threads = new Thread[15];
@@ -216,7 +272,7 @@ namespace OP.MSCRM.AutoNumberGenerator.PluginsTest
             {
                 //Delete entity
                 var entityId = createdEntities[i].Id;
-                threads[i] = new Thread(() => ActualOrgService.Delete("op_auto_number_test", entityId));
+                threads[i] = new Thread(() => ActualOrgService.Delete(entityLogicalName, entityId));
             }
 
             foreach (Thread thread in threads)
@@ -230,9 +286,9 @@ namespace OP.MSCRM.AutoNumberGenerator.PluginsTest
             }
 
             //Validate duplicate of Auto Number
-            var updatedEntities = ActualOrgService.RetrieveAll<Entity>("op_auto_number_test", new ColumnSet("op_auto_number"));
+            var updatedEntities = ActualOrgService.RetrieveAll<Entity>(entityLogicalName, new ColumnSet(entityAttributeName));
 
-            bool isDuplicate = updatedEntities.GroupBy(e => e.Attributes["op_auto_number"]).Any(a => a.Count() > 1);
+            bool isDuplicate = updatedEntities.GroupBy(e => e.Attributes[entityAttributeName]).Any(a => a.Count() > 1);
 
 
             //Assert

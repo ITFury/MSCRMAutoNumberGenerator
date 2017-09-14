@@ -11,7 +11,7 @@ namespace OP.MSCRM.AutoNumberGenerator.PluginsTest
     public class GenerateAutoNumberManagerTest
     {
 
-        private GenerateAutoNumberManager AutoNumberManager
+        public GenerateAutoNumberManager AutoNumberManager
         {
             get
             {
