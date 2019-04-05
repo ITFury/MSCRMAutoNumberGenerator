@@ -1,30 +1,34 @@
-## MS CRM Auto Number Generator
+## Microsoft Dymanics 365 CRM Auto-Number Generator
 
 
-**MS CRM Auto Number Generator** add-on for Microsoft Dynamics CRM 2016 OnPremise allows automatic generate number for entities across the CRM system. 
-The format and length of number can be customized. 
+**Microsoft Dymanics 365 CRM Auto-Number Generator** add-on for Online allows automatic generate number for entities and fields across the CRM system. 
+It allows to specify format of Auto-Number: set the start number, increment, prefix in any symbols, number length, suffix in any symbols. 
 
 You can generate:
 
-- Whole number (Sample: **1, 01, 00001**);
-- Number with prefix (Sample: **Auto-1, Auto-01, Auto-00001**);
-- Number with suffix (Sample: **1-Number, 01-Number, 00001-Number**);
-- Number with prefix and suffix (Sample: **Auto-1-Number, Auto-01-Number, Auto-00001-Number**).
+- Whole number (Sample: **1, 00001, 0000030**);
+- Number with prefix (Sample: **A4q?&-1, A4q?&01, A4q?&-0000030**);
+- Number with suffix (Sample: **1-Bio!, 01Bio!, 00001-Bio!**);
+- Number with prefix and suffix (Sample: **A4q?&-1-Bio!, A4q?&01Bio!, A4q?&-00001-Bio!**).
 
-Add-on have possibility to override auto number on Delete event. It don't allow to update auto number manually on Update event.
+Auto-Number Generator have possibility to rearrange Auto-Number in display entity under the following conditions:
+- triggered  **Delete** event;
+- **Rearrange Sequence After Delete** field value on **Auto-Number Configuration** form is set to **Yes**. 
+
+It don't allows to update Auto-Number manually on the form on **Update** event. In result an appropriate error message will appear.
 
 
 ## Getting Started
 
 ### Prerequisites
 
-- Install Microsoft Dynamics CRM 2016 OnPremise;
-- Install Microsoft Dynamics CRM SDK to use *Plugin Registration Tool*;
-- You must have  *System Customizer* Security Role in Microsoft Dynamics CRM.
+- Install Microsoft Dynamics 365 CRM Online;
+- Download Dynamics 365 for Customer Engagement apps Software Development Kit (SDK) to use *Plugin Registration Tool*;
+- You must have *System Customizer* Security Role in Microsoft Dynamics CRM.
 
 ### Installing
 
-To install **MS CRM Auto Number Generator** add-on, import `AutoNumberGenerator_1_0_0_0.zip` solution to Microsoft Dynamics CRM 2016:
+To install **MS CRM Auto Number Generator** add-on, import `AutoNumberGenerator_1_0_0_0.zip` solution to Microsoft Dynamics 365 CRM:
 
 1. Navigate to **Settings -> Solutions**.
 2. Click **Import** button on action bar.
