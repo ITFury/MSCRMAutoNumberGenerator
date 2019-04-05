@@ -5,14 +5,13 @@ using Microsoft.Xrm.Sdk.Query;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.ServiceModel.Description;
 
 
 namespace OP.MSCRM.AutoNumberGenerator.PluginsTest
 {
     /// <summary>
-    /// MS CRM Helper for testing
+    /// D365 CRM Helper for Tests
     /// </summary>
     public static class MSCRMHelper
     {
@@ -21,32 +20,32 @@ namespace OP.MSCRM.AutoNumberGenerator.PluginsTest
         /// </summary>
         /// <param name="userName">User name</param>
         /// <param name="password">User password</param>
-        /// <param name="domainName">Domain name</param>
         /// <returns>Client credentials</returns>
-        private static ClientCredentials Credentials(string userName, string password, string domainName)
+        private static ClientCredentials Credentials(string userName, string password)
         {
 
             ClientCredentials credentials = new ClientCredentials();
-            credentials.Windows.ClientCredential = new NetworkCredential(userName, password, domainName);
+            credentials.UserName.UserName = userName;
+            credentials.UserName.Password = password;
+
             return credentials;
 
         }
 
         /// <summary>
-        /// Connect to MS CRM
+        /// Connect to D365 CRM
         /// </summary>
         /// <param name="userName">User name</param>
         /// <param name="password">User password</param>
-        /// <param name="domainName">Domain name</param>
-        /// <param name="soapOrgServiceUri">Organization Service uri</param>
+        /// <param name="soapOrgServiceUri">Organization Service Endpoint</param>
         /// <returns>Organization Service</returns>
-        private static IOrganizationService ConnectToMSCRM(string userName, string password, string domainName, string soapOrgServiceUri)
+        private static IOrganizationService ConnectToD365CRM(string userName, string password, string soapOrgServiceUri)
         {
             IOrganizationService orgService = null;
             try
             {
-                ClientCredentials credentials = Credentials(userName, password, domainName);
-
+                ClientCredentials credentials = Credentials(userName, password);
+                
                 Uri serviceUri = new Uri(soapOrgServiceUri);
                 OrganizationServiceProxy proxy = new OrganizationServiceProxy(serviceUri, null, credentials, null);
                 proxy.EnableProxyTypes();
@@ -54,7 +53,7 @@ namespace OP.MSCRM.AutoNumberGenerator.PluginsTest
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"MS CRM connection error: {ex.Message}");
+                Console.WriteLine($"D365 CRM connection error: {ex.Message}");
             }
 
             return orgService;
@@ -68,11 +67,10 @@ namespace OP.MSCRM.AutoNumberGenerator.PluginsTest
         {
             get
             {
-                return ConnectToMSCRM(
-                    "userName",
-                    "password",
-                    "domainName",
-                    "http://ServerName/OrganizationName/XRMServices/2011/Organization.svc");
+                return ConnectToD365CRM(
+                    "Username",
+                    "Password",
+                    "https://xxxxx.api.crm4.dynamics.com/XRMServices/2011/Organization.svc");
             }
         }
 

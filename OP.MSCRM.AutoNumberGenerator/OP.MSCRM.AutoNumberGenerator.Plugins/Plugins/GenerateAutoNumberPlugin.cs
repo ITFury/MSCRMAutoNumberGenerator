@@ -4,22 +4,14 @@ using OP.MSCRM.AutoNumberGenerator.Plugins.ExceptionHandling;
 using OP.MSCRM.AutoNumberGenerator.Plugins.Extensions;
 using OP.MSCRM.AutoNumberGenerator.Plugins.Managers;
 using System;
-using System.Threading;
 
 namespace OP.MSCRM.AutoNumberGenerator.Plugins.Plugins
 {
     /// <summary>
-    /// Auto Number generation plug-in
+    /// Auto-Number generation plug-in
     /// </summary>
     public class GenerateAutoNumberPlugin : IPlugin
     {
-        /// <summary>
-        /// Get object instance to lock thread.
-        /// </summary>
-        public object ThisLock
-        {
-            get { return GenerateAutoNumberManager.ThisLock; }
-        }
 
         /// <summary>
         /// Get GenerateAutoNumberManager instance
@@ -64,55 +56,47 @@ namespace OP.MSCRM.AutoNumberGenerator.Plugins.Plugins
                 IPluginExecutionContext context = serviceProvider.GetPluginExecutionContext();
                 IOrganizationService orgService = serviceProvider.GetOrganizationService();
 
-                // Lock duplicate Auto Number generation
-                lock (ThisLock)
+                //Plugin step message
+                switch (context.MessageName)
                 {
-                    //Plugin step message
-                    switch (context.MessageName)
-                    {
-                        //Create
-                        case ExecutionContextMessageName.Create:
-   
-                            //Method is executed sequentially — about 100 milliseconds apart
-                            Thread.Sleep(100);
+                    //Create
+                    case ExecutionContextMessageName.Create:
 
-                            Entity entityToCreate = context.GetTarget();
-                            AutoNumberManager.CreateAutoNumber(orgService, entityToCreate);
+                        Entity entityToCreate = context.GetTarget();
+                        AutoNumberManager.CreateAutoNumber(orgService, entityToCreate);
 
-                            break;
+                        break;
 
-                        //Update
-                        case ExecutionContextMessageName.Update:
+                    //Update
+                    case ExecutionContextMessageName.Update:
 
-                            Entity entityToUpdate = context.GetTarget();
-                            AutoNumberManager.UpdateAutoNumber(orgService, entityToUpdate);
-                      
-                            break;
+                        //If depth > 1 (plug-in triggered from other step) do not allow execute update
+                        if (context.Depth > 1) return;
 
-                        //Delete
-                        case ExecutionContextMessageName.Delete:
-   
-                            //Method is executed sequentially — about 100 milliseconds apart
-                            Thread.Sleep(100);
+                        Entity entityToUpdate = context.GetTarget();
+                        AutoNumberManager.NotUpdateAutoNumber(orgService, entityToUpdate);
 
-                            EntityReference deletedEntityMonikier = context.GetReferenceTarget();
-                            Entity entityToDelete = new Entity(deletedEntityMonikier.LogicalName, deletedEntityMonikier.Id);
+                        break;
 
-                            AutoNumberManager.OverrideAutoNumber(orgService, entityToDelete);
+                    //Delete
+                    case ExecutionContextMessageName.Delete:
 
-                            break;
+                        EntityReference deletedEntityMonikier = context.GetReferenceTarget();
+                        Entity entityToDelete = new Entity(deletedEntityMonikier.LogicalName, deletedEntityMonikier.Id);
+
+                        AutoNumberManager.DeleteAutoNumber(orgService, entityToDelete);
+
+                        break;
 
 
-                        default:
-                            break;
-                    }
+                    default:
+                        break;
                 }
-            }
+            }            
             catch (PluginException ex)
             {
                 throw new InvalidPluginExecutionException($"{ex.Name} {ex.Description}");
             }
         }
-
     }
 }

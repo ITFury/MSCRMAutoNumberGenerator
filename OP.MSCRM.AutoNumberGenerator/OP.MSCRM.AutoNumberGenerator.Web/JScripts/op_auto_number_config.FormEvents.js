@@ -6,6 +6,9 @@
 
 function op_auto_number_configOnLoad()
 {
+    formInit();
+    _setDefaultValues();
+    
     _setDisabled();
 }
 
@@ -33,30 +36,116 @@ function op_field_nameOnChange()
 }
 
 
-function op_formatOnChange() {
+function op_start_numberOnChange() {
 
-    _validateFormat();
+    _setSequence();
+    _setNumberPreview();
+}
+
+
+function op_number_lengthOnChange() {
+    _setNumberPreview();
+}
+
+
+function op_number_prefixOnChange() {
+    _setNumberPreview();
+}
+
+
+function op_number_suffixOnChange() {
+    _setNumberPreview();
 }
 
 
 /*---CONSTANTS---*/
+const startNumberDefault = "1";
+const numberStepDefault = "1";
+const numberLengthDefault = "1";
 
-//Variable is needed to display Error Message only once. CRM specific: after value is set to null Error Message appears twice.
-var ERROR_COUNTER = 0;
 
 
 /*---FUNCTIONS---*/
 
-function _setDisabled()
-    ///<summary>Set field behavior to read-only mode</summary>
+function _setNumberPreview() {
+
+    if (isCreateForm)
+    {
+
+        var startNumber = Xrm.Page.getAttribute("op_start_number").getValue() == null ? startNumberDefault : Xrm.Page.getAttribute("op_start_number").getValue();
+        var numberLength = Xrm.Page.getAttribute("op_number_length").getValue() == null ? numberLengthDefault : Xrm.Page.getAttribute("op_number_length").getValue();
+        var numberPrefix = Xrm.Page.getAttribute("op_number_prefix").getValue() == null ? "" : Xrm.Page.getAttribute("op_number_prefix").getValue();
+        var numberSuffix = Xrm.Page.getAttribute("op_number_suffix").getValue() == null ? "" : Xrm.Page.getAttribute("op_number_suffix").getValue();
+
+        if (startNumber && numberLength)
+        {
+            //Format number by length. If number is 2 and length is 4, then formatted number is 0002.
+            number = Array(numberLength - String(startNumber).length + 1).join('0') + startNumber;
+
+            var numberPreview = numberPrefix + number + numberSuffix;
+            Xrm.Page.getAttribute("op_number_preview").setValue(numberPreview);
+        }
+    }
+}
+
+
+function _setSequence() {
+
+    if (isCreateForm) {
+        var startNumber = Xrm.Page.getAttribute("op_start_number").getValue();
+        if (startNumber != null)
+        {
+            Xrm.Page.getAttribute("op_sequence").setValue(startNumber);
+        }
+    }
+}
+
+function _setDefaultValues()
+///<summary>Set field default values</summary>
 {
-    var isUpdateForm = Xrm.Page.ui.getFormType() == FORM_TYPE_UPDATE;
-   
+    //If the form is in Create state set fields default values
+    if (isCreateForm) {
+        var startNumber = Xrm.Page.getAttribute("op_start_number").getValue();
+        if (startNumber == null) {
+            Xrm.Page.getAttribute("op_start_number").setValue(startNumberDefault);
+        }
+
+        var numberStep = Xrm.Page.getAttribute("op_number_step").getValue();
+        if (numberStep == null) {
+            Xrm.Page.getAttribute("op_number_step").setValue(numberStepDefault);
+        }
+
+        var numberLength = Xrm.Page.getAttribute("op_number_length").getValue();
+        if (numberLength == null) {
+            Xrm.Page.getAttribute("op_number_length").setValue(numberLengthDefault);
+        }
+
+        var sequence = Xrm.Page.getAttribute("op_sequence").getValue();
+        if ((startNumber != null && sequence == null) || sequence < startNumber) {
+            Xrm.Page.getAttribute("op_sequence").setValue(startNumber);
+        }
+
+    }
+
+    _setSequence();
+    _setNumberPreview();
+}
+
+
+function _setDisabled()
+///<summary>Set field behavior to read-only mode</summary>
+{   
     //If the form is in Update state set fields to read-only
     if (isUpdateForm)
     {
         Xrm.Page.getControl("op_entity_name").setDisabled(isUpdateForm);
         Xrm.Page.getControl("op_field_name").setDisabled(isUpdateForm);
+        Xrm.Page.getControl("op_start_number").setDisabled(isUpdateForm);
+        Xrm.Page.getControl("op_number_step").setDisabled(isUpdateForm);
+        Xrm.Page.getControl("op_number_length").setDisabled(isUpdateForm);
+        Xrm.Page.getControl("op_number_prefix").setDisabled(isUpdateForm);
+        Xrm.Page.getControl("op_number_suffix").setDisabled(isUpdateForm);
+        Xrm.Page.getControl("op_number_preview").setDisabled(isUpdateForm);
     }
 }
 
@@ -67,15 +156,11 @@ function _showError(errorMsg, fieldName)
     ///<param name="fieldName" type="String">Entity field name that need to clear</param>
 {
 
-    //Display error message only if counter is odd number.
-    if (ERROR_COUNTER != 0 && isOdd(ERROR_COUNTER))
-    {
-        showModalDialog(errorMsg);
-    }
+    //Display error message
+    showModalDialog(errorMsg);
+
     //clear field value
     Xrm.Page.getAttribute(fieldName).setValue(null);
-    ERROR_COUNTER++;
-
 }
 
 
@@ -119,18 +204,18 @@ function _validatePresentedEntity()
                         else if (i == systemForm.length - 1 && fieldExist == -1)
                         {
                             //Display error message
-                            var errorMsg = "Field '" + fieldName + "' of Entity '" + searchEntityName + "' doesn't exist.";
+                            errorMsg = "Field '" + fieldName + "' of Entity '" + searchEntityName + "' doesn't exist.";
                             _showError(errorMsg, "op_field_name");
                         }
                     }
                 }
             }
         }
-        //Entity with presented Entity Name doesn't exist
+        //Presented Entity Name doesn't exist
         else
         {
             //Display error message
-            var errorMsg = "Entity '" + searchEntityName + "' doesn't exist.";
+            errorMsg = "Entity '" + searchEntityName + "' doesn't exist.";
             _showError(errorMsg, "op_entity_name");
         }
     }
@@ -156,7 +241,7 @@ function _uniqueNameDuplicateDetection(executionObj, uniqueName)
     if (autoNumberConfig != null && autoNumberConfig.length > 0)
     {
         //Display error message
-        var errorMsg = "Entity Unique Name '" + uniqueName + "' already exist. Please change Entity Name or Entity Field value.";
+        errorMsg = "Entity Unique Name '" + uniqueName + "' already exist. Please change Entity Name or Entity Field value.";
         showModalDialog(errorMsg);
 
         if (executionObj != null)
@@ -172,8 +257,6 @@ function _setUniqueName(executionObj) {
     ///<summary>Set record Unique Name in format: <op_entity_name> - <op_field_name></summary>
     ///<param name="executionObj" type="object">Execution object</param>
 
-    var isCreateForm = Xrm.Page.ui.getFormType() == FORM_TYPE_CREATE;
-   
     //If the form is in Create state set Unique Name
     if (isCreateForm) {
 
@@ -199,27 +282,6 @@ function _setUniqueName(executionObj) {
                 //clear Unique Name
                 Xrm.Page.getAttribute("op_unique_name").setValue(null);
             }
-        }
-    }
-}
-
-function _validateFormat()
-    ///<summary>Validate Auto Number Format. Correct formats examples: {0}, A-{0}, A-{0}-B</summary>
-    ///<return>Error message</return>
-{
-
-    //get Format
-    var autoNumberFormat = Xrm.Page.getAttribute("op_format").getValue();
-    if (autoNumberFormat != null)
-    {
-        var format = autoNumberFormat.indexOf('{0}');
-
-        //Format is incorrect
-        if (format == -1)
-        {
-            //Display error message
-            var errorMsg = "Presented Format '" + autoNumberFormat + "' is incorrect. Please insert correct Format like {0} or prefix{0} or prefix{0}suffix.";
-            _showError(errorMsg, "op_format");
         }
     }
 }

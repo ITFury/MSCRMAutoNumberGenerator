@@ -4,19 +4,18 @@
 /*---CONSTANTS---*/
 
 //Form types
-var FORM_TYPE_CREATE = 1;
-var FORM_TYPE_UPDATE = 2;
+const formTypes = { create: 1, update: 2 };
+var isCreateForm;
+var isUpdateForm;
 
+var errorMsg;
 
 /*---FUNCTIONS---*/
-
-function isOdd(num) {
-    ///<summary>Validate is passed odd number or not.</summary>
-    ///<param name="num" type="number">Number</param>
-    ///<return>true or false</return>
-    return !!(num % 2);
+function formInit() {
+    var formType = Xrm.Page.ui.getFormType();
+    isCreateForm = formType == formTypes.create;
+    isUpdateForm = formType == formTypes.update;
 }
-
 
 function showModalDialog(errorMsg)
     ///<summary>Show error message in Modal Dialog.</summary>
@@ -27,7 +26,8 @@ function showModalDialog(errorMsg)
 
     //Passing parameters to web resource
     var addParams = "dlgTitle=" + dlgTitle + "&dlgBody=" + dlgBody;
-    var webResourceUrl = "/WebResources/op_ModalDialog?Data=" + encodeURIComponent(addParams);
+    var webResourceName = "op_ModalDialog.html";
+    var webResourceUrl = "/WebResources/" + webResourceName + "?Data=" + encodeURIComponent(addParams);
 
     var dialogOptions = new Xrm.DialogOptions();
     dialogOptions.width = 350;
@@ -44,9 +44,11 @@ function _getODataEndpointUrl() {
     ///<summary>Get oData Endpoint Url</summary>
     ///<return>oData Endpoint Url</return>
 
-    var serverUrl = document.location.protocol + "//" + document.location.host + "/" + Xrm.Page.context.getOrgUniqueName();
-
-    return serverUrl + "/XRMServices/2011/OrganizationData.svc";
+    if (typeof Xrm.Page.context == "object")
+    {
+        clientUrl = Xrm.Page.context.getClientUrl();
+        return clientUrl + "/XRMServices/2011/OrganizationData.svc";
+    }
 }
 
 
@@ -70,6 +72,7 @@ function _retrieve(oDataQuery) {
             result = retrievedRecords.results;
         }
     };
+
     if (typeof (retrieveRecordsReq.send()) != "undefined") {
         retrieveRecordsReq.send();
     }
@@ -107,7 +110,7 @@ function _createODataQuery(entityName, searchFieldNames, searchFieldValues, sear
         if (i != (searchFieldNames.length - 1))
             filter += " and ";
     }
-    oDataQuery += filter
+    oDataQuery += filter;
     if (recordsToReturn != "")
         oDataQuery += "&$top=" + recordsToReturn;
 

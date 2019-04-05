@@ -1,4 +1,6 @@
 ﻿using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Messages;
+using Microsoft.Xrm.Sdk.Metadata;
 using Microsoft.Xrm.Sdk.Query;
 using OP.MSCRM.AutoNumberGenerator.Plugins.Entities;
 using System;
@@ -9,7 +11,7 @@ using System.Linq;
 namespace OP.MSCRM.AutoNumberGenerator.Plugins.Extensions
 {
     /// <summary>
-    /// Organization Service operation extension
+    /// Organization Service operation extensions
     /// </summary>
     public static class OrganizationServiceExtensions
     {
@@ -19,7 +21,7 @@ namespace OP.MSCRM.AutoNumberGenerator.Plugins.Extensions
         /// </summary>
         /// <typeparam name="T">Entity</typeparam>
         /// <param name="orgService">Organization Service</param>
-        /// <param name="entityName">Entity name</param>
+        /// <param name="entityName">Entity schema name</param>
         /// <param name="id">Entity Id</param>
         /// <param name="returnColumn">Column to return</param>
         /// <returns>Entity</returns>
@@ -36,7 +38,7 @@ namespace OP.MSCRM.AutoNumberGenerator.Plugins.Extensions
 
 
         /// <summary>
-        /// Retrieve entity list by parameters base
+        /// Base Retrieve entity list by parameters
         /// </summary>
         /// <typeparam name="T">Entity</typeparam>
         /// <param name="orgService">Organization Service</param>
@@ -44,7 +46,7 @@ namespace OP.MSCRM.AutoNumberGenerator.Plugins.Extensions
         /// <param name="value">Search parameters values</param>
         /// <param name="returnColumn">Column to return</param>
         /// <param name="condition">Condition operator</param>
-        /// <param name="entityName">Entity name to return</param>
+        /// <param name="entityName">Entity schema name to return</param>
         /// <returns>Entity list</returns>
         public static List<T> RetrieveByParamBase<T>(this IOrganizationService orgService, string[] param, string[] value, ColumnSet returnColumn, ConditionOperator[] condition, string entityName) where T : Entity
         {
@@ -107,7 +109,7 @@ namespace OP.MSCRM.AutoNumberGenerator.Plugins.Extensions
         /// </summary>
         /// <typeparam name="T">Entity</typeparam>
         /// <param name="orgService">Organization Service</param>
-        /// <param name="entityName">Entity name</param>
+        /// <param name="entityName">Entity schema name</param>
         /// <param name="param">Search parameters</param>
         /// <param name="value">Search parameters values</param>
         /// <param name="returnColumn">Column to return</param>
@@ -120,11 +122,11 @@ namespace OP.MSCRM.AutoNumberGenerator.Plugins.Extensions
 
 
         /// <summary>
-        /// Retrieve op_auto_number_config entity list by op_entity_name value
+        /// Retrieve Auto-Number Configuration entity list by Auto-Number Display Entity attribute value
         /// </summary>
         /// <param name="orgService">Organization Service</param>
-        /// <param name="entityName">Entity name where display Auto Number</param>
-        /// <returns>op_auto_number_config entity list</returns>
+        /// <param name="entityName">Entity schema name where display Auto-Number</param>
+        /// <returns>Auto-Number Configuration entity list</returns>
         public static List<op_auto_number_config> RetrieveAutoNumberConfig(this IOrganizationService orgService, string entityName)
         {
             ColumnSet returnColumn = new ColumnSet(true);
@@ -140,30 +142,74 @@ namespace OP.MSCRM.AutoNumberGenerator.Plugins.Extensions
 
 
         /// <summary>
-        /// Retrieve Auto Number display entity list except execution entity
+        /// Retrieve Auto-Number display entity list except execution entity
         /// </summary>
         /// <param name="orgService">Organization Service</param>
-        /// <param name="autoNumberDisplayEntity">Entity name where display Auto Number</param>
-        /// <param name="autoNumberDisplayField">Entity field where display Auto Number</param>
-        /// <returns>Entity list</returns>
-        public static List<Entity> RetrieveAutoNumberDisplayEntities(this IOrganizationService orgService, Entity autoNumberDisplayEntity, string autoNumberDisplayField)
+        /// <param name="entityName">Entity where display Auto-Number</param>
+        /// <param name="attributeName">Attribute schema name where display Auto-Number</param>
+        /// <returns>Entity list where display Auto-Number</returns>
+        public static List<Entity> RetrieveAutoNumberDisplayEntitiesExceptCurrent(this IOrganizationService orgService, Entity entityName, string attributeName)
         {
-            var entityName = autoNumberDisplayEntity.LogicalName;
+            var entityLogicalName = entityName.LogicalName;
+            var entityIdAttribute = $"{entityLogicalName.ToLower()}id";
+
+            ColumnSet returnColumn = new ColumnSet
+                (
+                    entityIdAttribute,//Auto-Number display entity Id
+                    attributeName//Auto-Number display attribute
+                );
+
+            string[] param = { entityIdAttribute };
+            string[] value = { entityName.Id.ToString()};
+            ConditionOperator[] notEqual = { ConditionOperator.NotEqual };
+
+            List<Entity> autoNumberDisplayEntities = orgService.RetrieveByParam<Entity>(entityLogicalName, param, value, returnColumn, notEqual);
+
+            return autoNumberDisplayEntities;
+        }
+
+
+        /// <summary>
+        /// Retrieve Auto-Number display entity
+        /// </summary>
+        /// <param name="orgService">Organization Service</param>
+        /// <param name="autoNumberDisplayEntity">Entity schema name where display Auto-Number</param>
+        /// <param name="attributeName">Attribute schema name where display Auto-Number</param>
+        /// <returns>Entity where display Auto-Number</returns>
+        public static Entity RetrieveAutoNumberDisplayEntity(this IOrganizationService orgService, string entityName, Guid entityId, string attributeName)
+        {
             var entityIdAttribute = $"{entityName.ToLower()}id";
 
             ColumnSet returnColumn = new ColumnSet
                 (
-                    entityIdAttribute,//Auto Number Display Entity Id
-                    autoNumberDisplayField//Auto Number Display Entity Display Field
+                    entityIdAttribute,//Auto-Number display entity Id
+                    attributeName//Auto-Number display attribute
                 );
 
-            string[] param = { entityIdAttribute };
-            string[] value = { autoNumberDisplayEntity.Id.ToString()};
-            ConditionOperator[] notEqual = { ConditionOperator.NotEqual };
+            Entity autoNumberDisplayEntity = orgService.RetrieveById<Entity>(entityName, entityId, returnColumn);
 
-            List<Entity> autoNumberDisplayEntities = orgService.RetrieveByParam<Entity>(entityName, param, value, returnColumn, notEqual);
+            return autoNumberDisplayEntity;
+        }
 
-            return autoNumberDisplayEntities;
+        /// <summary>
+        /// Retireve attribute display name
+        /// </summary>
+        /// <param name="orgService">Organization Service</param>
+        /// <param name="entityName">Entity schema name</param>
+        /// <param name="attributeName">Attribute schema name</param>
+        /// <returns></returns>
+        public static string RetrieveAttributeDisplayName(this IOrganizationService orgService, string entityName, string attributeName)
+        {
+            RetrieveAttributeRequest retrieveAttributeRequest = new RetrieveAttributeRequest
+            {
+                EntityLogicalName = entityName,
+                LogicalName = attributeName,
+                RetrieveAsIfPublished = true
+            };
+            RetrieveAttributeResponse retrieveAttributeResponse = (RetrieveAttributeResponse)orgService.Execute(retrieveAttributeRequest);
+            AttributeMetadata retrievedAttributeMetadata = retrieveAttributeResponse.AttributeMetadata;
+
+            return retrievedAttributeMetadata.DisplayName.UserLocalizedLabel.Label;
         }
     }
 }

@@ -30,5 +30,6 @@ namespace OP.MSCRM.AutoNumberGenerator.Plugins.Extensions
                 ? (EntityReference)pluginExecutionContext.InputParameters["Target"]
                 : null;
         }
+
     }
 }
