@@ -1,8 +1,9 @@
 ﻿using Microsoft.Xrm.Sdk;
-using Microsoft.Xrm.Sdk.Query;
+using OP.MSCRM.AutoNumberGenerator.Plugins.Constants;
 using OP.MSCRM.AutoNumberGenerator.Plugins.Entities;
 using OP.MSCRM.AutoNumberGenerator.Plugins.ExceptionHandling;
 using OP.MSCRM.AutoNumberGenerator.Plugins.Extensions;
+using OP.MSCRM.AutoNumberGenerator.Plugins.Plugins;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,26 +13,31 @@ using System.Text;
 namespace OP.MSCRM.AutoNumberGenerator.Plugins.Managers
 {
     /// <summary>
-    /// Auto-Number generation manager to generate, create, update, delete and rearrange Auto-Number
+    /// Auto-Number generation manager to generate, create, update, delete and rearrange Auto-Number in display entity
     /// </summary>
     public class GenerateAutoNumberManager
     {
         /// <summary>
-        /// Create Auto-Number manager instance only once
+        /// Create GenerateAutoNumberManager instance only once
         /// </summary>
-        public static GenerateAutoNumberManager AutoNumberManager = new GenerateAutoNumberManager();
+        public static GenerateAutoNumberManager GenerateAutoNumber = new GenerateAutoNumberManager();
 
         /// <summary>
-        /// Auto-Number Sequence
+        /// Get ConfigureAutoNumberManager instance
         /// </summary>
-        private int? Sequence { get; set; }
+        public ConfigureAutoNumberManager ConfigureAutoNumberManager
+        {
+            get { return ConfigureAutoNumberManager.ConfigureAutoNumber; }
+        }
+
+        public string GenerateAutoNumberPluginName = typeof(GenerateAutoNumberPlugin).Name;
 
         /// <summary>
-        /// Get Number without suffix, prefix and other symbols from generated Auto-Number
+        /// Get Number without suffix, prefix and specific symbols from generated Auto-Number
         /// </summary>
         /// <param name="autoNumber">Generated Auto-Number</param>
-        /// <param name="prefix">Generated Auto-Number prefix</param>
-        /// <param name="suffix">Generated Auto-Number suffix</param>
+        /// <param name="prefix">Auto-Number prefix from config</param>
+        /// <param name="suffix">Auto-Number suffix from config</param>
         /// <returns>Number</returns>
         public int GetNumber(string autoNumber, string prefix, string suffix)
         {
@@ -63,32 +69,32 @@ namespace OP.MSCRM.AutoNumberGenerator.Plugins.Managers
             return number;
         }
 
+
         /// <summary>
         /// Generate Auto-Number in presented format specified in Auto-Number Configuration settings
         /// </summary>
-        /// <param name="numberLength">Length of Auto-Nomber base. For example, 4 will be displayed as 0000</param>
+        /// <param name="length">Length of Auto-Nomber base. For example, 4 will be displayed as 0000</param>
         /// <param name="sequence">Current Auto-Number sequence</param>
         /// <param name="prefix">Auto-Number prefix</param>
         /// <param name="suffix">Auto-Number suffix</param>
         /// <returns>Generated Auto-Number</returns>
-        public string GenerateAutoNumber(int? numberLength, int? sequence, string prefix, string suffix)
+        public string Generate(int? length, int? sequence, string prefix, string suffix)
         {
-            try
-            {
-                //Auto-Number lenght formatting
-                StringBuilder numberLenghtBuilder = new StringBuilder();
-                if (numberLength != null && numberLength.HasValue)
-                {
-                    numberLenghtBuilder.Insert(0, "0", numberLength.Value);
-                }
-                var numberCount = numberLenghtBuilder.Length > 0 ? numberLenghtBuilder.ToString() : "0";
+            var autoNumber = string.Empty;
 
-                //Set current sequence
-                Sequence = sequence;
+            if (sequence != null)
+            {
+                //Auto-Number length formatting
+                StringBuilder numberLengthBuilder = new StringBuilder();
+                if (length != null && length.HasValue)
+                {
+                    numberLengthBuilder.Insert(0, "0", length.Value);
+                }
+                var numberLength = numberLengthBuilder.Length > 0 ? numberLengthBuilder.ToString() : "0";
 
                 //Generate Auto-Number
-                var numberFormat = $"{{0:{numberCount}}}";
-                var autoNumber = string.Format(numberFormat, Sequence);
+                var numberFormat = $"{{0:{numberLength}}}";
+                autoNumber = string.Format(numberFormat, sequence);
 
                 if (!string.IsNullOrWhiteSpace(prefix))
                 {
@@ -99,313 +105,275 @@ namespace OP.MSCRM.AutoNumberGenerator.Plugins.Managers
                 {
                     autoNumber = $"{autoNumber}{suffix}";
                 }
+            }
 
-                return autoNumber;
-            }
-            catch (Exception ex)
+            if (string.IsNullOrWhiteSpace(autoNumber))
             {
-                throw new PluginException("An error occurred in the GenerateAutoNumberPlugin plug-in.", $"Can't generate Auto-Number. {ex.Message}");
+                throw new PluginException(string.Format(ExceptionMessages.Name, GenerateAutoNumberPluginName),
+                ExceptionMessages.CantGenerateMsg);
             }
+
+            return autoNumber;
         }
 
-        /// <summary>
-        /// Lock Auto-Number Configuration entity to avoid Auto-Number generation duplicates
-        /// </summary>
-        /// <param name="orgService">Organization Service</param>
-        /// <param name="autoNumberConfigId">Auto-Number Configuration entity Id</param>
-        /// <param name="autoNumberConfigLogicalName">Auto-Number Configuration entity schema name</param>
-        /// <returns>Locked Auto-Number Configuration entity</returns>
-        private op_auto_number_config LockAutoNumberConfig (IOrganizationService orgService, Guid autoNumberConfigId, string autoNumberConfigLogicalName)
-        {
-            //Lock Auto-Number Configuration entity 
-            op_auto_number_config autoNumberConfigLocker = new op_auto_number_config
-            {
-                Id = autoNumberConfigId,
-                LogicalName = autoNumberConfigLogicalName,
-                op_is_locked = true
-            };
-            //Lock all transactions
-            orgService.Update(autoNumberConfigLocker);
-
-            //Retrive locked Auto-Number Configuration to prevent duplicates generation
-            op_auto_number_config lockedAutoNumberConfig = orgService
-                .Retrieve(autoNumberConfigLocker.LogicalName, autoNumberConfigLocker.Id, new ColumnSet(true))
-                .ToEntity<op_auto_number_config>();
-
-            if(lockedAutoNumberConfig == null)
-            {
-                throw new PluginException("An error occurred in the GenerateAutoNumberPlugin plug-in.", "Can't find Auto-Number Configuration entity.");
-            }
-
-            return lockedAutoNumberConfig;
-        }
-
-
-        /// <summary>
-        /// Update Auto-Number Configiguration entity Sequence attribute
-        /// </summary>
-        /// <param name="orgService">Organization Service</param>
-        /// <param name="autoNumberConfig">Auto-Number Configiguration entity</param>
-        private void UpdateAutoNumberConfig(IOrganizationService orgService, op_auto_number_config autoNumberConfig)
-        {
-            try
-            {
-                op_auto_number_config autoNumberConfigUpdate = new op_auto_number_config
-                {
-                    Id = autoNumberConfig.Id,
-                    LogicalName = autoNumberConfig.LogicalName,
-                    op_sequence = Sequence
-                };
-                orgService.Update(autoNumberConfigUpdate);
-            }
-            catch (FaultException<OrganizationServiceFault> ex)
-            {
-                throw new PluginException("An error occurred in the GenerateAutoNumberPlugin plug-in.",
-                    $"Can't update Auto-Number Configuration entity Sequence field. {ex.Message}");
-            }
-            catch (Exception ex)
-            {
-                throw new PluginException("An error occurred in the GenerateAutoNumberPlugin plug-in.",
-                    $"{ex.Message}");
-            }
-        }
-
+       
         /// <summary>
         /// Create Auto-Number in current entity
         /// </summary>
         /// <param name="orgService">Organization Service</param>
         /// <param name="currentEntity">Current entity schema name where display Auto-Number</param>
-        internal void CreateAutoNumber(IOrganizationService orgService, Entity currentEntity)
+        internal void Create(IOrganizationService orgService, Entity currentEntity)
         {
-            string configAutoNumberDisplayField = string.Empty;
+            string configFieldSchemaName = string.Empty;
             string entityName = currentEntity.LogicalName;
             try
             {
-                List<op_auto_number_config> autoNumberConfigs = orgService.RetrieveAutoNumberConfig(entityName);
-
-                foreach (var autoNumberConfig in autoNumberConfigs)
+                List<Op_AutoNumberConfig> configs = orgService.RetrieveAutoNumberConfig(entityName);
+                if (configs != null)
                 {
-                    //Lock Auto-Number Configuration entity 
-                    op_auto_number_config lockedAutoNumberConfig = LockAutoNumberConfig(orgService, autoNumberConfig.Id, autoNumberConfig.LogicalName);
+                    foreach (var config in configs)
+                    {
+                        //Lock Auto-Number Configuration entity 
+                        Op_AutoNumberConfig lockedConfig = ConfigureAutoNumberManager.Lock(orgService, config.Id, config.LogicalName);
 
-                    //Get values from Auto-Number Configuration entity
-                    configAutoNumberDisplayField = lockedAutoNumberConfig.op_field_name;
-                    int? numberStep = lockedAutoNumberConfig.op_number_step;
-                    int? sequence = lockedAutoNumberConfig.op_sequence;
-                    int? numberLength = lockedAutoNumberConfig.op_number_length;
-                    string prefix = lockedAutoNumberConfig.op_number_prefix;
-                    string suffix = lockedAutoNumberConfig.op_number_suffix;
-                    string preview = lockedAutoNumberConfig.op_number_preview;
+                        //Get values from Auto-Number Configuration entity
+                        configFieldSchemaName = lockedConfig.FieldSchemaName;
+                        int? configIncrement = lockedConfig.Increment;
+                        int? configSequence = lockedConfig.Sequence;
+                        int? configLength = lockedConfig.Length;
+                        string configPrefix = lockedConfig.Prefix;
+                        string configSuffix = lockedConfig.Suffix;
+                        string configPreview = lockedConfig.Preview;
 
-                    //Get sequence from Auto-Number 
-                    List<Entity> autoNumberDisplayEntities = orgService
-                        .RetrieveAutoNumberDisplayEntitiesExceptCurrent(currentEntity, configAutoNumberDisplayField);
+                        //Get sequence from Auto-Number 
+                        List<Entity> displayEntities = orgService
+                            .RetrieveAutoNumberDisplayEntitiesExceptCurrent(currentEntity, configFieldSchemaName);
 
-                    //Validate have Auto-Number display entity default Auto-Number
-                    bool containsDefaultAutoNumber = autoNumberDisplayEntities != null
-                        && autoNumberDisplayEntities
-                            .Any(e => e.Contains(configAutoNumberDisplayField) && e.GetAttributeValue<string>(configAutoNumberDisplayField) == preview);
+                        //Validate have Auto-Number display entity default Auto-Number
+                        bool containsDefaultAutoNumber = displayEntities != null
+                            && displayEntities
+                                .Any(e => e.Contains(configFieldSchemaName) && e.GetAttributeValue<string>(configFieldSchemaName) == configPreview);
 
-                    //Get current sequence
-                    //If display entity do not have default Auto-Number, set sequence to default value, otherwise next increased by number step
-                    int? newSequence = !containsDefaultAutoNumber
-                             ? sequence
-                             : sequence + numberStep;
+                        //Get current sequence
+                        //If display entity do not have default Auto-Number, set sequence to default value, otherwise add increment
+                        int? currentSequence = !containsDefaultAutoNumber
+                                 ? configSequence
+                                 : configSequence + configIncrement;
 
-                    //Generate Auto-Number
-                    var generatedAutoNumber = GenerateAutoNumber(numberLength, newSequence, prefix, suffix);
+                        var generatedAutoNumber = Generate(configLength, currentSequence, configPrefix, configSuffix);
 
-                    //Set Auto-Number in current entity
-                    currentEntity[configAutoNumberDisplayField] = generatedAutoNumber;
+                        currentEntity[configFieldSchemaName] = generatedAutoNumber;
 
-                    //Update Auto-Number Configuration entity Sequence attribute
-                    UpdateAutoNumberConfig(orgService, lockedAutoNumberConfig);
+                        //Update Auto-Number Configuration entity Sequence attribute
+                        ConfigureAutoNumberManager.Update(orgService, lockedConfig, currentSequence);
+                    }
                 }
             }
             catch (FaultException<OrganizationServiceFault> ex)
             {
-                var autoNumberFieldDisplayName = orgService.RetrieveAttributeDisplayName(entityName, configAutoNumberDisplayField);
+                var fieldDisplayName = orgService.RetrieveAttributeDisplayName(entityName, configFieldSchemaName);
 
-                throw new PluginException("An error occurred in the GenerateAutoNumberPlugin plug-in.",
-                    $"Can't set Auto-Number value of {autoNumberFieldDisplayName} field in current entity. {ex.Message}");
+                throw new PluginException(string.Format(ExceptionMessages.Name, GenerateAutoNumberPluginName),
+                    $"{string.Format(ExceptionMessages.CantSetMsg, fieldDisplayName)} {ex.Message}");
+            }
+            catch(PluginException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
-                throw new PluginException("An error occurred in the GenerateAutoNumberPlugin plug-in.", $"{ex.Message}");
+                throw new PluginException(string.Format(ExceptionMessages.Name, GenerateAutoNumberPluginName), ex.Message);
             }
         }
 
 
         /// <summary>
-        /// Don't allow update Auto-Number manually. Always set Auto-Number to database value.
+        /// Don't allow update Auto-Number manually
         /// </summary>
         /// <param name="orgService">Organization Service</param>
         /// <param name="currentEntity">Current entity where display Auto-Number</param>
-        internal void NotUpdateAutoNumber(IOrganizationService orgService, Entity currentEntity)
+        internal void Update(IOrganizationService orgService, Entity currentEntity)
         {
             var entityName = currentEntity.LogicalName;
-            List<op_auto_number_config> autoNumberConfigs = orgService.RetrieveAutoNumberConfig(entityName);
-
-            foreach (var autoNumberConfig in autoNumberConfigs)
+            List<Op_AutoNumberConfig> configs = orgService.RetrieveAutoNumberConfig(entityName);
+            if (configs != null)
             {
-                //Lock Auto-Number Configuration entity 
-                op_auto_number_config lockedAutoNumberConfig = LockAutoNumberConfig(orgService, autoNumberConfig.Id, autoNumberConfig.LogicalName);
-
-                //Get Auto-Number display Field Name value from Auto-Number Configuration entity
-                string configAutoNumberDisplayField = lockedAutoNumberConfig.op_field_name;
-
-                //If current entity Auto-Number was updated manually, show error message
-                if(currentEntity.Contains(configAutoNumberDisplayField))
+                foreach (var config in configs)
                 {
-                    var autoNumberFieldDisplayName = orgService.RetrieveAttributeDisplayName(entityName, configAutoNumberDisplayField);
+                    //Lock Auto-Number Configuration entity 
+                    Op_AutoNumberConfig lockedConfig = ConfigureAutoNumberManager.Lock(orgService, config.Id, config.LogicalName);
 
-                    throw new PluginException("An error occurred in the GenerateAutoNumberPlugin plug-in.", 
-                        $"Automatically generated number of {autoNumberFieldDisplayName} field can't be updated manually.");
+                    //Get Auto-Number display Field Name value from Auto-Number Configuration entity
+                    string configFieldSchemaName = lockedConfig.FieldSchemaName;
+
+                    //If current entity Auto-Number was updated manually, show error message
+                    if (currentEntity.Contains(configFieldSchemaName))
+                    {
+                        var fieldDisplayName = orgService.RetrieveAttributeDisplayName(entityName, configFieldSchemaName);
+
+                        throw new PluginException(string.Format(ExceptionMessages.Name, GenerateAutoNumberPluginName),
+                            string.Format(ExceptionMessages.CantUpdateManuallyMsg, fieldDisplayName));
+                     }
                 }
             }
         }
 
 
         /// <summary>
-        /// Update Auto-Number automatically in display entity. 
+        /// Update Auto-Number automatically in display entity 
         /// </summary>
         /// <param name="orgService">Organization Service</param>
-        /// <param name="autoNumberDisplayEntity">Entity where display Auto-Number</param>
-        /// <param name="autoNumberAttribute">Attribute schema name where display Auto-Number</param>
+        /// <param name="displayEntity">Entity where display Auto-Number</param>
+        /// <param name="fieldSchemaName">Attribute schema name where display Auto-Number</param>
         /// <param name="autoNumber">Generated Auto-Number</param>
-        private void UpdateAutoNumber(IOrganizationService orgService, Entity autoNumberDisplayEntity, string autoNumberAttribute, string autoNumber)
+        public void UpdateAutoNumber(IOrganizationService orgService, Entity displayEntity, string fieldSchemaName, string autoNumber)
         {
             try
             {
-                Entity autoNumberDisplayEntityUpdate = new Entity(autoNumberDisplayEntity.LogicalName)
+                Entity displayEntityUpdate = new Entity(displayEntity.LogicalName)
                 {
-                    Id = autoNumberDisplayEntity.Id
+                    Id = displayEntity.Id
                 };
-                //Set generated Auto-Number
-                autoNumberDisplayEntityUpdate.Attributes[autoNumberAttribute] = autoNumber;
+                displayEntityUpdate.Attributes[fieldSchemaName] = autoNumber;
 
-                orgService.Update(autoNumberDisplayEntityUpdate);
+                orgService.Update(displayEntityUpdate);
             }
             catch (FaultException<OrganizationServiceFault> ex)
             {
-                throw new PluginException("An error occurred in the GenerateAutoNumberPlugin plug-in.", $"Can't update current entity Auto-Number field. {ex.Message}");
+                throw new PluginException(string.Format(ExceptionMessages.Name, GenerateAutoNumberPluginName), 
+                    $"{ExceptionMessages.CantUpdateMsg} {ex.Message}");
             }
             catch (Exception ex)
             {
-                throw new PluginException("An error occurred in the GenerateAutoNumberPlugin plug-in.", $"{ex.Message}");
+                throw new PluginException(string.Format(ExceptionMessages.Name, GenerateAutoNumberPluginName), ex.Message);
             }
         }
 
 
         /// <summary>
-        /// Rearrange Auto-Number in display entity in case if number rearrange is allowed in Auto-Number Configuration entity. 
+        /// Rearrange Auto-Number in display entity in case if number rearrange is allowed in Auto-Number Configuration entity 
         /// </summary>
         /// <param name="orgService">Organization Service</param>
-        /// <param name="autoNumberDisplayEntityToRearrange">Entity where display and rearrange Auto-Number</param>
-        /// <param name="autoNumberConfig">Auto-Number Configuration entity</param>
-        /// <param name="currentEntityAutoNumberSeq">Current entity Auto-Number sequence</param>
-        private void RearrangeAutoNumber(IOrganizationService orgService, Entity autoNumberDisplayEntityToRearrange, op_auto_number_config autoNumberConfig, int currentEntityAutoNumberSeq)
+        /// <param name="displayEntityToRearrange">Entity where display and rearrange Auto-Number</param>
+        /// <param name="config">Auto-Number Configuration entity</param>
+        /// <param name="currentEntitySequence">Current entity Auto-Number sequence</param>
+        private void Rearrange(IOrganizationService orgService, Entity displayEntityToRearrange, Op_AutoNumberConfig config, int currentEntitySequence)
         {
-            string configAutoNumberDisplayField = autoNumberConfig.op_field_name;
-            string autoNumberToRearrange = autoNumberDisplayEntityToRearrange.GetAttributeValue<string>(configAutoNumberDisplayField);
+            string configFieldSchemaName = config.FieldSchemaName;
+            string autoNumberToRearrange = displayEntityToRearrange.GetAttributeValue<string>(configFieldSchemaName);
 
-            string prefix = autoNumberConfig.op_number_prefix;
-            string suffix = autoNumberConfig.op_number_suffix;
-            int autoNumberToRearrangeSeq = GetNumber(autoNumberToRearrange, prefix, suffix);
+            string configPrefix = config.Prefix;
+            string configSuffix = config.Suffix;
+            int autoNumberToRearrangeSeq = GetNumber(autoNumberToRearrange, configPrefix, configSuffix);
             
             //Get Sequence value from Auto-Number Configuration entity
-            int configSeq = autoNumberConfig.op_sequence.Value;
+            int configSequence = config.Sequence.Value;
 
-            if (currentEntityAutoNumberSeq <= autoNumberToRearrangeSeq
-                && autoNumberToRearrangeSeq <= configSeq)
+            if (currentEntitySequence <= autoNumberToRearrangeSeq
+                && autoNumberToRearrangeSeq <= configSequence)
             {
-                if (autoNumberDisplayEntityToRearrange.Attributes.ContainsKey(configAutoNumberDisplayField))
+                if (displayEntityToRearrange.Attributes.ContainsKey(configFieldSchemaName))
                 {
-                    int? configNumberStep = autoNumberConfig.op_number_step;
-                    var rearrangedSeq = autoNumberToRearrangeSeq - configNumberStep;
-                    int? numberLenght = autoNumberConfig.op_number_length;
+                    int? configIncrement = config.Increment;
+                    var rearrangedSequence = autoNumberToRearrangeSeq - configIncrement;
+                    int? configLength = config.Length;
                     
                     //Generate Auto-Number
-                    var generatedNewAutoNumber = GenerateAutoNumber(numberLenght, rearrangedSeq, prefix, suffix);
+                    var generatedAutoNumber = Generate(configLength, rearrangedSequence, configPrefix, configSuffix);
 
                     //Update rearranged Auto-Number in display entity
-                    UpdateAutoNumber(orgService, autoNumberDisplayEntityToRearrange, configAutoNumberDisplayField, generatedNewAutoNumber);
+                    UpdateAutoNumber(orgService, displayEntityToRearrange, configFieldSchemaName, generatedAutoNumber);
                 }
             }
         }
 
 
         /// <summary>
-        /// Delete or rearrnage Auto-Number. 
+        /// Delete or rearrnage Auto-Number 
         /// If Rearrange Sequence After Delete value is set to Yes, then delete and rearrange Auto-Number, otherwise only delete 
         /// </summary>
         /// <param name="orgService">Organization Service</param>
         /// <param name="currentEntity">Current entity</param>
-        internal void DeleteAutoNumber(IOrganizationService orgService, Entity currentEntity)
+        internal void Delete(IOrganizationService orgService, Entity currentEntity)
         {
-            var entityName = currentEntity.LogicalName;
-            List<op_auto_number_config> autoNumberConfigs = orgService.RetrieveAutoNumberConfig(entityName);
-
-            foreach (var autoNumberConfig in autoNumberConfigs)
+            try
             {
-                //Lock Auto-Number Configuration entity 
-                op_auto_number_config lockedAutoNumberConfig = LockAutoNumberConfig(orgService, autoNumberConfig.Id, autoNumberConfig.LogicalName);
-
-                //Get values from Auto-Number Configuration entity                
-                bool rearrangeSeq = lockedAutoNumberConfig.op_rearrange_sequence;
-                int? configNumberStep = lockedAutoNumberConfig.op_number_step;
-                int? configSeq = lockedAutoNumberConfig.op_sequence;
-
-                //Set current Sequence
-                Sequence = configSeq.Value - configNumberStep;
-
-                //If Rearrange Sequence After Delete value is set to Yes then rearrange Auto-Number
-                if (rearrangeSeq)
+                var entityName = currentEntity.LogicalName;
+                List<Op_AutoNumberConfig> configs = orgService.RetrieveAutoNumberConfig(entityName);
+                if (configs != null)
                 {
-                    //Get Auto-Number display Field Name value from Auto-Number Configuration entity
-                    string configAutoNumberDisplayField = lockedAutoNumberConfig.op_field_name;
-
-                    //Retrieve current Auto-Number display entity
-                    Entity currentEntityFromDB = orgService.RetrieveAutoNumberDisplayEntity(entityName, currentEntity.Id, configAutoNumberDisplayField);
-                    if (currentEntityFromDB != null)
+                    foreach (var config in configs)
                     {
-                        if (currentEntityFromDB.Attributes.ContainsKey(configAutoNumberDisplayField))
+                        //Lock Auto-Number Configuration entity 
+                        Op_AutoNumberConfig lockedConfig = ConfigureAutoNumberManager.Lock(orgService, config.Id, config.LogicalName);
+
+                        //Get values from Auto-Number Configuration entity                
+                        bool configRrearrangeSequence = lockedConfig.IsRearrangeSequence;
+                        int? configIncrement = lockedConfig.Increment;
+                        int? configSequence = lockedConfig.Sequence;
+
+                        //Set current Sequence
+                        int? currentSequence = configSequence.Value - configIncrement;
+
+                        //If Rearrange Sequence After Delete value is set to Yes then rearrange Auto-Number
+                        if (configRrearrangeSequence)
                         {
-                            //Get Auto-Number from current entity
-                            string currentEntityAutoNumber = currentEntityFromDB.GetAttributeValue<string>(configAutoNumberDisplayField);
+                            //Get Auto-Number display Field Name value from Auto-Number Configuration entity
+                            string configFieldSchemaName = lockedConfig.FieldSchemaName;
 
-                            string prefix = lockedAutoNumberConfig.op_number_prefix;
-                            string suffix = lockedAutoNumberConfig.op_number_suffix;
-                            int currentEntityAutoNumberSeq = GetNumber(currentEntityAutoNumber, prefix,suffix);
-
-                            //If Auto-Number isn't last in current entity then rearrange Auto-Number
-                            if (configSeq.Value != currentEntityAutoNumberSeq)
+                            //Retrieve current Auto-Number display entity
+                            Entity currentEntityFromDB = orgService.RetrieveAutoNumberDisplayEntity(entityName, currentEntity.Id, configFieldSchemaName);
+                            if (currentEntityFromDB != null)
                             {
-                                List<Entity> autoNumberDisplayEntitiesToRearrange = orgService.RetrieveAutoNumberDisplayEntitiesExceptCurrent(currentEntity, configAutoNumberDisplayField);
-                                if (autoNumberDisplayEntitiesToRearrange != null)
+                                if (currentEntityFromDB.Attributes.ContainsKey(configFieldSchemaName))
                                 {
-                                    foreach (var autoNumberDisplayEntityToRearrange in autoNumberDisplayEntitiesToRearrange)
+                                    //Get Auto-Number from current entity
+                                    string currentEntityAutoNumber = currentEntityFromDB.GetAttributeValue<string>(configFieldSchemaName);
+
+                                    string confiPrefix = lockedConfig.Prefix;
+                                    string configSuffix = lockedConfig.Suffix;
+                                    int currentEntitySequence = GetNumber(currentEntityAutoNumber, confiPrefix, configSuffix);
+
+                                    //If Auto-Number isn't last in current entity then rearrange Auto-Number
+                                    if (configSequence.Value != currentEntitySequence)
                                     {
-                                        RearrangeAutoNumber(orgService, autoNumberDisplayEntityToRearrange, lockedAutoNumberConfig, currentEntityAutoNumberSeq);
+                                        List<Entity> displayEntitiesToRearrange = orgService.RetrieveAutoNumberDisplayEntitiesExceptCurrent
+                                            (currentEntity, configFieldSchemaName);
+                                        if (displayEntitiesToRearrange != null)
+                                        {
+                                            foreach (var displayEntityToRearrange in displayEntitiesToRearrange)
+                                            {
+                                                Rearrange(orgService, displayEntityToRearrange, lockedConfig, currentEntitySequence);
+                                            }
+                                        }
+                                    }
+                                    //If Auto-Number is last in current entity then reset Sequence to default value
+                                    else
+                                    {
+                                        //Reset Sequence to default value
+                                        currentSequence = lockedConfig.Start;
                                     }
                                 }
                             }
-                            //If Auto-Number is last in current entity then reset Sequence to default value
-                            else
-                            {
-                                //Reset Sequence to default value
-                                Sequence = lockedAutoNumberConfig.op_start_number;
-                            }
+                        }
+
+                        //Update Auto-Number Configuration entity Sequence field
+                        if (configSequence != lockedConfig.Start)
+                        {
+                            ConfigureAutoNumberManager.Update(orgService, lockedConfig, currentSequence);
                         }
                     }
                 }
-
-                //Update Auto-Number Configuration entity Sequence field
-                if (configSeq != lockedAutoNumberConfig.op_start_number)
-                {
-                    UpdateAutoNumberConfig(orgService, lockedAutoNumberConfig);
-                }
+            }
+            catch (PluginException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                throw new PluginException(string.Format(ExceptionMessages.Name, GenerateAutoNumberPluginName), ex.Message);
             }
         }
+
     }
 }

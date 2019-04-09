@@ -8,25 +8,43 @@ const formTypes = { create: 1, update: 2 };
 var isCreateForm;
 var isUpdateForm;
 
+//Messages
+var dlgTitle = "Error";
 var errorMsg;
+var webResourceName = "op_ModalDialog.html";
 
 /*---FUNCTIONS---*/
-function formInit() {
+
+function formInit()
+{
     var formType = Xrm.Page.ui.getFormType();
     isCreateForm = formType == formTypes.create;
     isUpdateForm = formType == formTypes.update;
 }
 
+
+if (!String.format) {
+    ///<summary>Format message</summary>
+    String.format = function (format) {
+        var args = Array.prototype.slice.call(arguments, 1);
+        return format.replace(/{(\d+)}/g, function (match, number) {
+            return typeof args[number] != 'undefined'
+                ? args[number]
+                : match
+                ;
+        });
+    };
+}
+
+
 function showModalDialog(errorMsg)
     ///<summary>Show error message in Modal Dialog.</summary>
     ///<param name="errorMsg" type="string">Error message</param>
 {
-    var dlgTitle = "Error";
-    var dlgBody = errorMsg;
 
     //Passing parameters to web resource
-    var addParams = "dlgTitle=" + dlgTitle + "&dlgBody=" + dlgBody;
-    var webResourceName = "op_ModalDialog.html";
+    var addParams = "dlgTitle=" + dlgTitle + "&dlgBody=" + errorMsg;
+    
     var webResourceUrl = "/WebResources/" + webResourceName + "?Data=" + encodeURIComponent(addParams);
 
     var dialogOptions = new Xrm.DialogOptions();
@@ -59,22 +77,22 @@ function _retrieve(oDataQuery) {
 
     var result = null;
 
-    var retrieveRecordsReq = new XMLHttpRequest();
-    retrieveRecordsReq.open("GET", oDataQuery, false);
-    retrieveRecordsReq.setRequestHeader("Accept", "application/json");
-    retrieveRecordsReq.setRequestHeader("Content-Type", "application/json; charset=utf-8");
+    var request = new XMLHttpRequest();
+    request.open("GET", oDataQuery, false);
+    request.setRequestHeader("Accept", "application/json");
+    request.setRequestHeader("Content-Type", "application/json; charset=utf-8");
 
-    retrieveRecordsReq.onreadystatechange = function () {
+    request.onreadystatechange = function () {
 
         if (this.readyState == 4 && this.status == 200) {
-            var retrievedRecords = JSON.parse(retrieveRecordsReq.responseText).d;
+            var retrievedRecords = JSON.parse(request.responseText).d;
 
             result = retrievedRecords.results;
         }
     };
 
-    if (typeof (retrieveRecordsReq.send()) != "undefined") {
-        retrieveRecordsReq.send();
+    if (typeof (request.send()) != "undefined") {
+        request.send();
     }
 
     return result;

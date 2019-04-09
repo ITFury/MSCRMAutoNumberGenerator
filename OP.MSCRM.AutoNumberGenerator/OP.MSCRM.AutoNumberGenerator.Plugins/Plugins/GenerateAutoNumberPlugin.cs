@@ -16,9 +16,9 @@ namespace OP.MSCRM.AutoNumberGenerator.Plugins.Plugins
         /// <summary>
         /// Get GenerateAutoNumberManager instance
         /// </summary>
-        public GenerateAutoNumberManager AutoNumberManager
+        public GenerateAutoNumberManager GenerateAutoNumberManager
         {
-            get { return GenerateAutoNumberManager.AutoNumberManager; }
+            get { return GenerateAutoNumberManager.GenerateAutoNumber; }
         }
 
         
@@ -63,7 +63,7 @@ namespace OP.MSCRM.AutoNumberGenerator.Plugins.Plugins
                     case ExecutionContextMessageName.Create:
 
                         Entity entityToCreate = context.GetTarget();
-                        AutoNumberManager.CreateAutoNumber(orgService, entityToCreate);
+                        GenerateAutoNumberManager.Create(orgService, entityToCreate);
 
                         break;
 
@@ -74,7 +74,7 @@ namespace OP.MSCRM.AutoNumberGenerator.Plugins.Plugins
                         if (context.Depth > 1) return;
 
                         Entity entityToUpdate = context.GetTarget();
-                        AutoNumberManager.NotUpdateAutoNumber(orgService, entityToUpdate);
+                        GenerateAutoNumberManager.Update(orgService, entityToUpdate);
 
                         break;
 
@@ -84,7 +84,7 @@ namespace OP.MSCRM.AutoNumberGenerator.Plugins.Plugins
                         EntityReference deletedEntityMonikier = context.GetReferenceTarget();
                         Entity entityToDelete = new Entity(deletedEntityMonikier.LogicalName, deletedEntityMonikier.Id);
 
-                        AutoNumberManager.DeleteAutoNumber(orgService, entityToDelete);
+                        GenerateAutoNumberManager.Delete(orgService, entityToDelete);
 
                         break;
 

@@ -24,58 +24,54 @@ It don't allows to update Auto-Number manually on the form on **Update** event. 
 
 - Install Microsoft Dynamics 365 CRM Online;
 - Download Dynamics 365 for Customer Engagement apps Software Development Kit (SDK) to use *Plugin Registration Tool*;
-- You must have *System Customizer* Security Role in Microsoft Dynamics CRM.
+- You should have *System Customizer* Security Role in Microsoft Dynamics 365.
+
 
 ### Installing
 
-To install **MS CRM Auto Number Generator** add-on, import `AutoNumberGenerator_1_0_0_0.zip` solution to Microsoft Dynamics 365 CRM:
+To install **MS CRM Auto Number Generator**, import `AutoNumberGenerator_1_0_0_0.zip` solution to Microsoft Dynamics 365 CRM Online:
 
 1. Navigate to **Settings -> Solutions**.
 2. Click **Import** button on action bar.
 3. In the **Select Solution Package** screen click **Choose File** button and select `AutoNumberGenerator_1_0_0_0.zip`. Click **Next**.
-
-![ImportSolution_1](https://user-images.githubusercontent.com/31651093/30382323-7b1f1b8a-98a7-11e7-9c3f-ac567fe14663.png)
-
 4. In the **Solution Information** screen click **Next**.
 5. In the **Import Options** screen click **Import**.
 6. In the **Importing Solution** screen click **Publish All Customizations**.
-
-![ImportSolution_2](https://user-images.githubusercontent.com/31651093/30382335-8147f77a-98a7-11e7-8065-be2121e4dc0b.png)
-
 7. Click **Close**.
 
 Imported Solution include:
 
-- **Auto Number Config** (`op_auto_number_config`) entity to configure auto number generation;
-- **Auto Number (test)** (`op_auto_number_test`) entity to test auto number generation;
-- Registered `OP.MSCRM.AutoNumberGenerator.Plugins` assembly with **Create, Update, Delete** steps on `op_auto_number_test` entity.
+- **Auto-Number Configuration** (`op_autonumberconfig`) entity to configure auto number generation;
+- **Auto-Number Test** (`op_autonumbertest`) entity to test auto number generation;
+- Registered `OP.MSCRM.AutoNumberGenerator.Plugins` assembly with **Create, Update, Delete** steps on `op_autonumbertest` entity.
 
-**Create** - create Auto Number in sequence order.
+**Create** - create Auto-Number in provided format.
 
-**Update** - don't allow to update Auto Number manually.
+**Update** - don't allows to update Auto-Number manually.
 
-**Delete** - override Auto Number if **Auto Number Config** entity field **Override Sequence** is set to **Yes**. 
+**Delete** - delete or delete and rearrange sequence of existing Auto-Numbers. 
 
-*Delete event sample:*
+*Sample of Delete event with rearrange:*
 
-| Generated number | Deleted number | Number after delete |
+| Generated Auto-Number | Deleted Auto-Number | Rearranged Auto-Number |
 | - | - | - |
-| 01 |  | 01 |
-| 02 |  | 02 |
-| 03 | 03 |    |
-| 04 |  | 03 |
-| 05 |  | 04 |
+| A-001 |  | A-001 |
+| A-002 |  | A-002 |
+| A-003 | A-003 |    |
+| A-004 |  | A-003 |
+| A-005 |  | A-004 |
 
 
-**Configure Your Own Auto Number**
+**Configure Your Own Auto-Number**
 
-1. In Microsoft Dynamics CRM navigate to **Settings -> Auto Number Configs**.
+1. In Microsoft Dynamics CRM navigate to **Settings -> Auto-Number Configurations**.
 2. In navigation bar click **NEW**.
 3. Input Your data.
 
-![AutoNumberConfig](https://user-images.githubusercontent.com/31651093/30382369-9cc7dcc2-98a7-11e7-8cee-69dfc838f27a.png)
+![AutoNumberConfiguration](https://user-images.githubusercontent.com/31651093/55780182-0d931e00-5ab0-11e9-994f-9614e5fe596c.png)
 
 4. Click **SAVE**.
+
 
 **Register Plugin on own Entity**
 
@@ -83,52 +79,49 @@ To register `OP.MSCRM.AutoNumberGenerator.Plugins` assembly on Your entity, open
 1. In organization tab on action bar choose **Register -> Register New Assembly**.
 2. In the **Register New Assembly** screen click **...** button and select `OP.MSCRM.AutoNumberGenerator.Plugins.dll`. Check **Select All / Deselect All** checkbox. Check islotaion mode **None** and assembly location **Database**. Click **Register Selected Plugins**.
 
-![PluginRegistrationTool_Assembly](https://user-images.githubusercontent.com/31651093/30382395-a72da732-98a7-11e7-8e31-af8a39bed15e.png)
+![RegisterAssembly](https://user-images.githubusercontent.com/31651093/55780196-0ec44b00-5ab0-11e9-854b-6ca85858e9f5.png)
 
 3. In organization tab right click on **(Plugin)OP.MSCRM.AutoNumbergenerator.Plugins.Plugins.GenerateAutoNumberPlugin -> Register New Step.**
 
-![PluginRegistrationTool_Step](https://user-images.githubusercontent.com/31651093/30382406-ae17ecce-98a7-11e7-95d8-166a75c62cb8.png)
+![RegisterNewStep](https://user-images.githubusercontent.com/31651093/55780197-0ec44b00-5ab0-11e9-970a-456d4b6ada15.png)
 
 4. Register **Create** step on Your **Primary Entity**.
 
-![PluginRegistrationTool_Create](https://user-images.githubusercontent.com/31651093/30382407-aee370ba-98a7-11e7-858a-b6c153d41c17.png)
+![CreateStep](https://user-images.githubusercontent.com/31651093/55780184-0e2bb480-5ab0-11e9-82df-527efbff899d.png)
 
 5. Register **Update** step on Your **Primary Entity**.
 
-![PluginRegistrationTool_Update](https://user-images.githubusercontent.com/31651093/30382412-b1566c58-98a7-11e7-935b-7fcc0f9c1213.png)
+![UpdateStep](https://user-images.githubusercontent.com/31651093/55780198-0f5ce180-5ab0-11e9-80fc-9ad7464dcb4c.png)
 
-To improve step performance, in **Filtering Attributes** field input field name where display generated Auto Number.
+To improve step performance, in **Filtering Attributes** field input field name where display generated Auto-Number.
 
 6. Register **Delete** step on Your **Primary Entity**.
 
-![PluginRegistrationTool_Delete](https://user-images.githubusercontent.com/31651093/30382414-b33ff5e8-98a7-11e7-9d1d-ef0d002d6836.png)
+![DeleteStep](https://user-images.githubusercontent.com/31651093/55780186-0e2bb480-5ab0-11e9-804f-016d9208dc2a.png)
 
 
-**Auto Number generation DEMO**
+**Auto-Number generation DEMO**
 
-- Generated Auto Numbers on Create event.
+- Generated Auto-Numbers on Create event.
 
-![AutoNumberTest_Create](https://user-images.githubusercontent.com/31651093/30382377-9f42d88a-98a7-11e7-956e-dc8cfc32540d.png)
+![DemoCreate](https://user-images.githubusercontent.com/31651093/55780187-0e2bb480-5ab0-11e9-98b1-feb229cb0bfb.png)
 
 
-- Auto Number override sample on Delete event.
+- Auto-Number behavior on Update event.
 
-![AutoNumberTest_Delete1](https://user-images.githubusercontent.com/31651093/30382381-a0c6fe66-98a7-11e7-873f-80775121b27d.png)
+![DemoUpdate](https://user-images.githubusercontent.com/31651093/55780193-0ec44b00-5ab0-11e9-8fb7-8c82e3c7ede1.png)
 
-![AutoNumberTest_Delete2](https://user-images.githubusercontent.com/31651093/30382384-a2c1219c-98a7-11e7-8622-3b68cfbff337.png)
 
-## Running the tests
+- Auto-Number behavior on Delete event with rearrange.
 
-To run **Unit Tests**, open `OP.MSCRM.AutoNumberGenerator.sln` in Visual Studio 2015.
-1. To connect to Your MS CRM, in `MSCRMHelper.cs` file change `OrgService` property credentials and organization URI to personal data.
+Before delete:
 
-![picture](https://user-images.githubusercontent.com/31651093/30382417-b5c2b38c-98a7-11e7-9d56-688d5891e4d3.png)
+![DemoDelete](https://user-images.githubusercontent.com/31651093/55780188-0ec44b00-5ab0-11e9-9497-c7804bde85f9.png)
 
-2. If You want to test own entity, then open `GenerateAutoNumberManagerCRMServicesTest.cs` file and change `entityLogicalName` value to Your entity logical name and `entityAttributeName` to Your entity attribute name.
+After delete:
 
-![picture](https://user-images.githubusercontent.com/31651093/30382422-b72b2d1c-98a7-11e7-853e-0204fd3b0b60.png)
+![DemoDeleteRearrange](https://user-images.githubusercontent.com/31651093/55780191-0ec44b00-5ab0-11e9-8b65-c236f124bd51.png)
 
-3. In Visual Studio on navigation bar click **Test -> Run -> All Tests**.
 
 ## License
 

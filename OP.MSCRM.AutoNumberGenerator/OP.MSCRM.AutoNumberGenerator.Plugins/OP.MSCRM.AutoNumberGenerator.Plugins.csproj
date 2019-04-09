@@ -52,13 +52,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Constants\ExceptionMessages.cs" />
     <Compile Include="Constants\ExecutionContextMessageName.cs" />
-    <Compile Include="Entities\op_auto_number_config.Attributes.cs" />
-    <Compile Include="Entities\op_auto_number_config.cs" />
+    <Compile Include="Entities\Op_AutoNumberConfig.Attributes.cs" />
+    <Compile Include="Entities\Op_AutoNumberConfig.cs" />
     <Compile Include="ExceptionHandling\PluginException.cs" />
     <Compile Include="Extensions\OrganizationServiceExtensions.cs" />
     <Compile Include="Extensions\PluginExecutionContextExtensions.cs" />
     <Compile Include="Extensions\ServiceProviderExtensions.cs" />
+    <Compile Include="GlobalSuppressions.cs" />
+    <Compile Include="Managers\ConfigureAutoNumberManager.cs" />
     <Compile Include="Managers\GenerateAutoNumberManager.cs" />
     <Compile Include="Plugins\GenerateAutoNumberPlugin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

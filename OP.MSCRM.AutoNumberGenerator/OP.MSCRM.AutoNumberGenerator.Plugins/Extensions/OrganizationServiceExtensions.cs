@@ -3,6 +3,7 @@ using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Metadata;
 using Microsoft.Xrm.Sdk.Query;
 using OP.MSCRM.AutoNumberGenerator.Plugins.Entities;
+using OP.MSCRM.AutoNumberGenerator.Plugins.ExceptionHandling;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,7 +39,7 @@ namespace OP.MSCRM.AutoNumberGenerator.Plugins.Extensions
 
 
         /// <summary>
-        /// Base Retrieve entity list by parameters
+        /// Base retrieve entity list by parameters
         /// </summary>
         /// <typeparam name="T">Entity</typeparam>
         /// <param name="orgService">Organization Service</param>
@@ -122,22 +123,21 @@ namespace OP.MSCRM.AutoNumberGenerator.Plugins.Extensions
 
 
         /// <summary>
-        /// Retrieve Auto-Number Configuration entity list by Auto-Number Display Entity attribute value
+        /// Retrieve Auto-Number Configuration entity list by Auto-Number display entity attribute value
         /// </summary>
         /// <param name="orgService">Organization Service</param>
         /// <param name="entityName">Entity schema name where display Auto-Number</param>
         /// <returns>Auto-Number Configuration entity list</returns>
-        public static List<op_auto_number_config> RetrieveAutoNumberConfig(this IOrganizationService orgService, string entityName)
+        public static List<Op_AutoNumberConfig> RetrieveAutoNumberConfig(this IOrganizationService orgService, string entityName)
         {
             ColumnSet returnColumn = new ColumnSet(true);
 
-            string[] param = { op_auto_number_config.op_entity_nameAttribute };
+            string[] param = { Op_AutoNumberConfig.EntitySchemaNameAttribute };
             string[] value = { entityName };
 
-            List<op_auto_number_config> autoNumberConfigs = orgService.RetrieveByParam<op_auto_number_config>(param, value, returnColumn);
+            List<Op_AutoNumberConfig> configs = orgService.RetrieveByParam<Op_AutoNumberConfig>(param, value, returnColumn);
 
-            return autoNumberConfigs;
-
+            return configs;
         }
 
 
@@ -163,9 +163,9 @@ namespace OP.MSCRM.AutoNumberGenerator.Plugins.Extensions
             string[] value = { entityName.Id.ToString()};
             ConditionOperator[] notEqual = { ConditionOperator.NotEqual };
 
-            List<Entity> autoNumberDisplayEntities = orgService.RetrieveByParam<Entity>(entityLogicalName, param, value, returnColumn, notEqual);
+            List<Entity> displayEntities = orgService.RetrieveByParam<Entity>(entityLogicalName, param, value, returnColumn, notEqual);
 
-            return autoNumberDisplayEntities;
+            return displayEntities;
         }
 
 
@@ -186,9 +186,9 @@ namespace OP.MSCRM.AutoNumberGenerator.Plugins.Extensions
                     attributeName//Auto-Number display attribute
                 );
 
-            Entity autoNumberDisplayEntity = orgService.RetrieveById<Entity>(entityName, entityId, returnColumn);
+            Entity displayEntity = orgService.RetrieveById<Entity>(entityName, entityId, returnColumn);
 
-            return autoNumberDisplayEntity;
+            return displayEntity;
         }
 
         /// <summary>
@@ -200,16 +200,18 @@ namespace OP.MSCRM.AutoNumberGenerator.Plugins.Extensions
         /// <returns></returns>
         public static string RetrieveAttributeDisplayName(this IOrganizationService orgService, string entityName, string attributeName)
         {
-            RetrieveAttributeRequest retrieveAttributeRequest = new RetrieveAttributeRequest
+            if (string.IsNullOrWhiteSpace(entityName) || string.IsNullOrWhiteSpace(attributeName)) return string.Empty;
+
+            RetrieveAttributeRequest request = new RetrieveAttributeRequest
             {
                 EntityLogicalName = entityName,
                 LogicalName = attributeName,
                 RetrieveAsIfPublished = true
             };
-            RetrieveAttributeResponse retrieveAttributeResponse = (RetrieveAttributeResponse)orgService.Execute(retrieveAttributeRequest);
-            AttributeMetadata retrievedAttributeMetadata = retrieveAttributeResponse.AttributeMetadata;
+            RetrieveAttributeResponse response = (RetrieveAttributeResponse)orgService.Execute(request);
+            AttributeMetadata metadata = response.AttributeMetadata;
 
-            return retrievedAttributeMetadata.DisplayName.UserLocalizedLabel.Label;
+            return metadata.DisplayName.UserLocalizedLabel.Label;
         }
     }
 }

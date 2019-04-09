@@ -46,7 +46,7 @@
   <ItemGroup>
     <Content Include="Htmls\ModalDialog.html" />
     <Content Include="JScripts\AutoNumberGenerator.FormsManager.js" />
-    <Content Include="JScripts\op_auto_number_config.FormEvents.js" />
+    <Content Include="JScripts\AutoNumberConfig.FormEvents.js" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
