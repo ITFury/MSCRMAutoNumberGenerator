@@ -4,17 +4,17 @@
 
 /*---EVENT HANDLERS---*/
 
-function op_autonumberconfigOnLoad()
+function op_autonumberconfigOnLoad(executionContext)
 {
-    formInit();
+    formInit(executionContext);
     _setDefaultValues();
     
     _setDisabled();
 }
 
 
-function op_autonumberconfigOnSave(executionObj) {
-    _setUniqueName(executionObj);
+function op_autonumberconfigOnSave(executionContext) {
+    _setUniqueName(executionContext);
 }
 
 
@@ -22,8 +22,8 @@ function op_entityschemanameOnChange()
 {
     _validatePresentedEntity();
 
-    var executionObj = null;
-    _setUniqueName(executionObj);
+    var executionContext = null;
+    _setUniqueName(executionContext);
 }
 
 
@@ -31,8 +31,8 @@ function op_fieldschemanameOnChange()
 {
     _validatePresentedEntity();
 
-    var executionObj = null;
-    _setUniqueName(executionObj);
+    var executionContext = null;
+    _setUniqueName(executionContext);
 }
 
 
@@ -86,7 +86,7 @@ const entitySchemaName = {
 const message = {
     fieldNotExist: "Field '{0}' of Entity '{1}' doesn't exist.",
     entityNotExist: "Entity '{0}' doesn't exist.",
-    uniqueNameExist: "Entity Unique Name '{0}' already exist. Please change Entity Schema Name or Field Schema Name value."
+    nameDuplicate: "Entity Name '{0}' already exist. Please change Entity Schema Name or Field Schema Name value."
 };
 
 
@@ -96,21 +96,21 @@ function _setNumberPreview() {
 
     if (isCreateForm)
     {
-        var startNumber = Xrm.Page.getAttribute(fieldSchemaName.start).getValue() == null
+        var startNumber = formContext.getAttribute(fieldSchemaName.start).getValue() == null
             ? defaultValue.start
-            : Xrm.Page.getAttribute(fieldSchemaName.start).getValue();
+            : formContext.getAttribute(fieldSchemaName.start).getValue();
 
-        var numberLength = Xrm.Page.getAttribute(fieldSchemaName.length).getValue() == null
+        var numberLength = formContext.getAttribute(fieldSchemaName.length).getValue() == null
             ? defaultValue.length
-            : Xrm.Page.getAttribute(fieldSchemaName.length).getValue();
+            : formContext.getAttribute(fieldSchemaName.length).getValue();
 
-        var numberPrefix = Xrm.Page.getAttribute(fieldSchemaName.prefix).getValue() == null
+        var numberPrefix = formContext.getAttribute(fieldSchemaName.prefix).getValue() == null
             ? ""
-            : Xrm.Page.getAttribute(fieldSchemaName.prefix).getValue();
+            : formContext.getAttribute(fieldSchemaName.prefix).getValue();
 
-        var numberSuffix = Xrm.Page.getAttribute(fieldSchemaName.suffix).getValue() == null
+        var numberSuffix = formContext.getAttribute(fieldSchemaName.suffix).getValue() == null
             ? ""
-            : Xrm.Page.getAttribute(fieldSchemaName.suffix).getValue();
+            : formContext.getAttribute(fieldSchemaName.suffix).getValue();
 
         if (startNumber && numberLength)
         {
@@ -119,7 +119,7 @@ function _setNumberPreview() {
 
             var numberPreview = String.format("{0}{1}{2}", numberPrefix, number, numberSuffix);
 
-            Xrm.Page.getAttribute(fieldSchemaName.preview).setValue(numberPreview);
+            formContext.getAttribute(fieldSchemaName.preview).setValue(numberPreview);
         }
     }
 }
@@ -128,10 +128,10 @@ function _setNumberPreview() {
 function _setSequence() {
 ///<summary>Set current sequence</summary>
     if (isCreateForm) {
-        var startNumber = Xrm.Page.getAttribute(fieldSchemaName.start).getValue();
+        var startNumber = formContext.getAttribute(fieldSchemaName.start).getValue();
         if (startNumber != null)
         {
-            Xrm.Page.getAttribute(fieldSchemaName.sequence).setValue(startNumber);
+            formContext.getAttribute(fieldSchemaName.sequence).setValue(startNumber);
         }
     }
 }
@@ -141,24 +141,24 @@ function _setDefaultValues()
 {
     //If the form is in Create state set fields default values
     if (isCreateForm) {
-        var startNumber = Xrm.Page.getAttribute(fieldSchemaName.start).getValue();
+        var startNumber = formContext.getAttribute(fieldSchemaName.start).getValue();
         if (startNumber == null) {
-            Xrm.Page.getAttribute(fieldSchemaName.start).setValue(defaultValue.start);
+            formContext.getAttribute(fieldSchemaName.start).setValue(defaultValue.start);
         }
 
-        var numberIncrement = Xrm.Page.getAttribute(fieldSchemaName.increment).getValue();
+        var numberIncrement = formContext.getAttribute(fieldSchemaName.increment).getValue();
         if (numberIncrement == null) {
-            Xrm.Page.getAttribute(fieldSchemaName.increment).setValue(defaultValue.increment);
+            formContext.getAttribute(fieldSchemaName.increment).setValue(defaultValue.increment);
         }
 
-        var numberLength = Xrm.Page.getAttribute(fieldSchemaName.length).getValue();
+        var numberLength = formContext.getAttribute(fieldSchemaName.length).getValue();
         if (numberLength == null) {
-            Xrm.Page.getAttribute(fieldSchemaName.length).setValue(defaultValue.length);
+            formContext.getAttribute(fieldSchemaName.length).setValue(defaultValue.length);
         }
 
-        var sequence = Xrm.Page.getAttribute(fieldSchemaName.sequence).getValue();
+        var sequence = formContext.getAttribute(fieldSchemaName.sequence).getValue();
         if ((startNumber != null && sequence == null) || sequence < startNumber) {
-            Xrm.Page.getAttribute(fieldSchemaName.sequence).setValue(startNumber);
+            formContext.getAttribute(fieldSchemaName.sequence).setValue(startNumber);
         }
 
     }
@@ -174,14 +174,14 @@ function _setDisabled()
     //If the form is in Update state set fields to read-only
     if (isUpdateForm)
     {
-        Xrm.Page.getControl(fieldSchemaName.entitySchemaName).setDisabled(isUpdateForm);
-        Xrm.Page.getControl(fieldSchemaName.fieldSchemaName).setDisabled(isUpdateForm);
-        Xrm.Page.getControl(fieldSchemaName.start).setDisabled(isUpdateForm);
-        Xrm.Page.getControl(fieldSchemaName.increment).setDisabled(isUpdateForm);
-        Xrm.Page.getControl(fieldSchemaName.length).setDisabled(isUpdateForm);
-        Xrm.Page.getControl(fieldSchemaName.prefix).setDisabled(isUpdateForm);
-        Xrm.Page.getControl(fieldSchemaName.suffix).setDisabled(isUpdateForm);
-        Xrm.Page.getControl(fieldSchemaName.preview).setDisabled(isUpdateForm);
+        formContext.getControl(fieldSchemaName.entitySchemaName).setDisabled(isUpdateForm);
+        formContext.getControl(fieldSchemaName.fieldSchemaName).setDisabled(isUpdateForm);
+        formContext.getControl(fieldSchemaName.start).setDisabled(isUpdateForm);
+        formContext.getControl(fieldSchemaName.increment).setDisabled(isUpdateForm);
+        formContext.getControl(fieldSchemaName.length).setDisabled(isUpdateForm);
+        formContext.getControl(fieldSchemaName.prefix).setDisabled(isUpdateForm);
+        formContext.getControl(fieldSchemaName.suffix).setDisabled(isUpdateForm);
+        formContext.getControl(fieldSchemaName.preview).setDisabled(isUpdateForm);
     }
 }
 
@@ -193,10 +193,10 @@ function _showError(errorMsg, fieldName)
 {
 
     //Display error message
-    showModalDialog(errorMsg);
+    openAlertDialog(errorMsg);
 
     //Clear field value
-    Xrm.Page.getAttribute(fieldName).setValue(null);
+    formContext.getAttribute(fieldName).setValue(null);
 }
 
 
@@ -206,7 +206,7 @@ function _validatePresentedEntity()
 {
 
     //get op_entityschemaname field value
-    var searchEntityName = Xrm.Page.getAttribute(fieldSchemaName.entitySchemaName).getValue();
+    var searchEntityName = formContext.getAttribute(fieldSchemaName.entitySchemaName).getValue();
    
     if (searchEntityName != null)
     {
@@ -228,7 +228,7 @@ function _validatePresentedEntity()
                 var formXml = systemForm[i].FormXml;
                 if (formXml != null) {
                     //get op_fieldschemaname field value
-                    var fieldName = Xrm.Page.getAttribute(fieldSchemaName.fieldSchemaName).getValue();
+                    var fieldName = formContext.getAttribute(fieldSchemaName.fieldSchemaName).getValue();
                     if (fieldName != null) {
                         var fieldExist = formXml.indexOf('"' + fieldName.toLowerCase() + '"');
 
@@ -258,9 +258,9 @@ function _validatePresentedEntity()
 }
 
 
-function _uniqueNameDuplicateDetection(executionObj, uniqueName)
+function _uniqueNameDuplicateDetection(executionContext, uniqueName)
     ///<summary>Detect Unique Name duplicate</summary>
-    ///<param name="executionObj" type="object">Execution object</param>
+    ///<param name="executionContext" type="object">Execution context</param>
     ///<param name="uniqueName" type="String">Unique entity name. Example: account-accountnumber</param>
     ///<return>Error message</return>
 {
@@ -277,46 +277,46 @@ function _uniqueNameDuplicateDetection(executionObj, uniqueName)
     if (autoNumberConfig != null && autoNumberConfig.length > 0)
     {
         //Display error message
-        errorMsg = String.format(message.uniqueNameExist, uniqueName);
-        showModalDialog(errorMsg);
+        errorMsg = String.format(message.nameDuplicate, uniqueName);
+        openAlertDialog(errorMsg);
 
-        if (executionObj != null)
+        if (executionContext != null)
         {
             //Cancel form save
-            executionObj.getEventArgs().preventDefault();
+            executionContext.getEventArgs().preventDefault();
         }
     }
 }
 
 
-function _setUniqueName(executionObj) {
+function _setUniqueName(executionContext) {
     ///<summary>Set record Unique Name in format: <op_entity_name> - <op_field_name></summary>
-    ///<param name="executionObj" type="object">Execution object</param>
+    ///<param name="executionContext" type="object">Execution object</param>
 
     //If the form is in Create state set Unique Name
     if (isCreateForm) {
 
-        if (Xrm.Page.getAttribute(fieldSchemaName.entitySchemaName) != null
-            && Xrm.Page.getAttribute(fieldSchemaName.fieldSchemaName) != null)
+        if (formContext.getAttribute(fieldSchemaName.entitySchemaName) != null
+            && formContext.getAttribute(fieldSchemaName.fieldSchemaName) != null)
         {
             //get values
-            var entityName = Xrm.Page.getAttribute(fieldSchemaName.entitySchemaName).getValue();
-            var fieldName = Xrm.Page.getAttribute(fieldSchemaName.fieldSchemaName).getValue();
+            var entityName = formContext.getAttribute(fieldSchemaName.entitySchemaName).getValue();
+            var fieldName = formContext.getAttribute(fieldSchemaName.fieldSchemaName).getValue();
 
             if (entityName != null && fieldName != null) {
 
                 var uniqueName = String.format("{0} - {1}", entityName, fieldName);
 
                 //Unique Name Duplicate Detection
-                _uniqueNameDuplicateDetection(executionObj, uniqueName);
+                _uniqueNameDuplicateDetection(executionContext, uniqueName);
 
                 //set Unique Name
-                Xrm.Page.getAttribute(fieldSchemaName.name).setValue(uniqueName);
+                formContext.getAttribute(fieldSchemaName.name).setValue(uniqueName);
             }
             else
             {
                 //clear Unique Name
-                Xrm.Page.getAttribute(fieldSchemaName.name).setValue(null);
+                formContext.getAttribute(fieldSchemaName.name).setValue(null);
             }
         }
     }

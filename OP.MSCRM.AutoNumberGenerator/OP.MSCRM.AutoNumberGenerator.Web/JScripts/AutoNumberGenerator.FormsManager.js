@@ -3,23 +3,28 @@
 
 /*---CONSTANTS---*/
 
-//Form types
 const formTypes = { create: 1, update: 2 };
+const orgServiceEndpointPart = "/XRMServices/2011/OrganizationData.svc";
+
+
+/*---VARIABLES---*/
+
+var formContext;
 var isCreateForm;
 var isUpdateForm;
-
-//Messages
-var dlgTitle = "Error";
 var errorMsg;
-var webResourceName = "op_ModalDialog.html";
+
 
 /*---FUNCTIONS---*/
 
-function formInit()
+function formInit(executionContext)
 {
-    var formType = Xrm.Page.ui.getFormType();
-    isCreateForm = formType == formTypes.create;
-    isUpdateForm = formType == formTypes.update;
+    formContext = executionContext.getFormContext();
+    if (formContext != null) {
+        var formType = formContext.ui.getFormType();
+        isCreateForm = formType == formTypes.create;
+        isUpdateForm = formType == formTypes.update;
+    }
 }
 
 
@@ -37,22 +42,12 @@ if (!String.format) {
 }
 
 
-function showModalDialog(errorMsg)
-    ///<summary>Show error message in Modal Dialog.</summary>
-    ///<param name="errorMsg" type="string">Error message</param>
+function openAlertDialog(msg)
+    ///<summary>Displays an alert dialog containing a message and a button.</summary>
+    ///<param name="msg" type="string">Message</param>
 {
-
-    //Passing parameters to web resource
-    var addParams = "dlgTitle=" + dlgTitle + "&dlgBody=" + errorMsg;
-    
-    var webResourceUrl = "/WebResources/" + webResourceName + "?Data=" + encodeURIComponent(addParams);
-
-    var dialogOptions = new Xrm.DialogOptions();
-    dialogOptions.width = 350;
-    dialogOptions.height = 200;
-
-    //Open Modal Dialog
-    Xrm.Internal.openDialog(webResourceUrl, dialogOptions, null, null, null);
+    var alertStrings = { text: msg };
+    Xrm.Navigation.openAlertDialog(alertStrings, null);
 }
 
 
@@ -62,11 +57,11 @@ function _getODataEndpointUrl() {
     ///<summary>Get oData Endpoint Url</summary>
     ///<return>oData Endpoint Url</return>
 
-    if (typeof Xrm.Page.context == "object")
-    {
-        clientUrl = Xrm.Page.context.getClientUrl();
-        return clientUrl + "/XRMServices/2011/OrganizationData.svc";
-    }
+    var globalContext = Xrm.Utility.getGlobalContext();
+    var clientUrl = globalContext.getClientUrl();
+    var endpointUrl = String.format('{0}{1}', clientUrl, orgServiceEndpointPart);
+
+    return endpointUrl;
 }
 
 

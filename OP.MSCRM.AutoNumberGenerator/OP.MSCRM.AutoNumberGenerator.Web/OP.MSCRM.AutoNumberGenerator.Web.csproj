@@ -44,7 +44,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Htmls\ModalDialog.html" />
     <Content Include="JScripts\AutoNumberGenerator.FormsManager.js" />
     <Content Include="JScripts\AutoNumberConfig.FormEvents.js" />
   </ItemGroup>
